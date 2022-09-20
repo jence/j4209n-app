@@ -2,8 +2,8 @@
 <launch4jConfig>
   <dontWrapJar>false</dontWrapJar>
   <headerType>gui</headerType>
-  <jar>C:\Work\workspace\j4210n-driver\demo\j4210n.jar</jar>
-  <outfile>C:\Work\workspace\j4210n-driver\demo\j4210n.exe</outfile>
+  <jar>C:\Work\workspace\j4209n-app\platform\win64\j4209n.jar</jar>
+  <outfile>C:\Work\workspace\j4209n-app\platform\win64\j4209n.exe</outfile>
   <errTitle></errTitle>
   <cmdLine></cmdLine>
   <chdir>.</chdir>
@@ -11,9 +11,9 @@
   <downloadUrl>http://java.com/download</downloadUrl>
   <supportUrl></supportUrl>
   <stayAlive>false</stayAlive>
-  <restartOnCrash>true</restartOnCrash>
+  <restartOnCrash>false</restartOnCrash>
   <manifest></manifest>
-  <icon>C:\Work\workspace\j4210n-driver\NfcApp32.ico</icon>
+  <icon>C:\Work\workspace\j4209n-app\platform\win64\NfcApp32.ico</icon>
   <singleInstance>
     <mutexName>jence</mutexName>
     <windowTitle>Jence Nfc App</windowTitle>

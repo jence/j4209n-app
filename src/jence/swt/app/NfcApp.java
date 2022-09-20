@@ -25,7 +25,7 @@ package jence.swt.app;
  * @version 1.0
  *
  */
-import jence.jni.J4210N;
+import jence.jni.J4209N;
 
 import org.eclipse.swt.*;
 import org.eclipse.swt.events.KeyEvent;
@@ -38,7 +38,7 @@ import org.eclipse.swt.widgets.*;
 
 public class NfcApp {
 	
-	public static J4210N driver_ = new J4210N();
+	public static J4209N driver_ = new J4209N();
 	public static final String VERSION = "1.7";
 	private static Shell app_;
 	private static Display display_;

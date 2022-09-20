@@ -11,7 +11,7 @@ import jence.swt.app.Callback;
  * @author soalib
  *
  */
-public class J4210N {
+public class J4209N {
 	public enum CardType {
         // ULTRALIGHT FAMILY
         ULTRALIGHT,
@@ -72,7 +72,7 @@ public class J4210N {
 	}
 
 	static {
-		System.loadLibrary("j4210n"); // Load native library hello.dll (Windows)
+		System.loadLibrary("j4209n"); // Load native library hello.dll (Windows)
 										// or libhello.so (Unixes)
 										// at runtime
 										// This library contains a native method
@@ -156,7 +156,7 @@ public class J4210N {
 	/**
 	 * 
 	 */
-	public J4210N() {
+	public J4209N() {
 	}
 	
 	public String[] listPorts() throws Exception {
@@ -478,7 +478,7 @@ public class J4210N {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		J4210N nfc = new J4210N();
+		J4209N nfc = new J4209N();
 		try {
 			String[] ports = nfc.listPorts();
 			nfc.open("com2");

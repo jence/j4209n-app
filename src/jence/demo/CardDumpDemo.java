@@ -5,14 +5,14 @@ package jence.demo;
 
 import java.util.Scanner;
 
-import jence.jni.J4210N;
+import jence.jni.J4209N;
 
 /**
  * @author soalib
  *
  */
 public class CardDumpDemo {
-	private static J4210N nfc = new J4210N();
+	private static J4209N nfc = new J4209N();
 
 	/**
 	 * 

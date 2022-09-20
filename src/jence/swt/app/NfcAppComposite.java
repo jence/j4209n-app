@@ -29,7 +29,7 @@ import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import jence.jni.J4210N;
+import jence.jni.J4209N;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.TableEditor;
@@ -109,7 +109,7 @@ public class NfcAppComposite extends Composite {
 	private Listener listener_;
 	private TabItem tbtmEmulate;
 	private Composite composite_5;
-	private J4210N.KeyData keydata_ = new J4210N.KeyData(0); // full access
+	private J4209N.KeyData keydata_ = new J4209N.KeyData(0); // full access
 	private Label lblUid_1;
 	private Text emulationUid_;
 	private Button btnStart;
@@ -756,7 +756,7 @@ public class NfcAppComposite extends Composite {
 
 			dump();
 
-			J4210N.CardType t = NfcApp.driver_.type();
+			J4209N.CardType t = NfcApp.driver_.type();
 			switch (t) {
 			case MIFARE_CLASSIC_1K:
 			case MIFARE_CLASSIC_4K:
@@ -807,7 +807,7 @@ public class NfcAppComposite extends Composite {
 			if (records > 0) {
 				ndeftable_.removeAll();
 				for (int i = 0; i < records; i++) {
-					J4210N.NdefRecord ndef = NfcApp.driver_.ndefGetRecord(i);
+					J4209N.NdefRecord ndef = NfcApp.driver_.ndefGetRecord(i);
 					TableItem item = new TableItem(ndeftable_,
 							SWT.FULL_SELECTION | SWT.OK);
 					item.setText(0, "" + i);

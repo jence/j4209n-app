@@ -31,7 +31,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Properties;
 
-import jence.jni.J4210N;
+import jence.jni.J4209N;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ModifyEvent;
@@ -107,7 +107,7 @@ public class AuthComposite extends Composite {
 	private Button btnDefaultKey;
 	private Composite composite;
 	private Label lblTrailerData;
-	private J4210N.KeyData key_ = new J4210N.KeyData(0);
+	private J4209N.KeyData key_ = new J4209N.KeyData(0);
 	private Button btnUse;
 
 	private byte[] hex2bytes(String hex, int arraySize) {
@@ -311,7 +311,7 @@ public class AuthComposite extends Composite {
 		trailerbits_.setText(hexA_.getText() + " " + accessbits_.getText()
 				+ " " + hexB_.getText());
 
-		key_ = new J4210N.KeyData(b3);
+		key_ = new J4209N.KeyData(b3);
 		key_.KeyA = hex2bytes(hexA_.getText(), 6);
 		key_.KeyB = hex2bytes(hexB_.getText(), 6);
 

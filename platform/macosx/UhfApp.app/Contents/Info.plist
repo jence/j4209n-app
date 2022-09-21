@@ -25,12 +25,12 @@
 	<key>Java</key>
 	<dict>
 		<key>MainClass</key>
-		<string>jence.swt.app.UhfApp</string>
+		<string>jence.swt.app.NfcApp</string>
 		<key>JVMVersion</key>
 		<string>1.7+</string>
 		<key>ClassPath</key>
 		<array>
-			<string>$APP_PACKAGE/Contents/MacOS/j4210u.jar</string>
+			<string>$APP_PACKAGE/Contents/MacOS/j42109n.jar</string>
 		</array>
 		<key>WorkingDirectory</key>
 		<string>$APP_PACKAGE/Contents/MacOS</string>

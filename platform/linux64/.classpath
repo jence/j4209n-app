@@ -7,7 +7,5 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="lib/swt.jar"/>
-	<classpathentry kind="lib" path="lib"/>
-	<classpathentry exported="true" kind="lib" path="/home/jence/Documents/j4210u-app/platform/linux64"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

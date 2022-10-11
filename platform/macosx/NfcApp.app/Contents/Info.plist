@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleName</key>
-	<string>UhfApp</string>
+	<string>NfcApp</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0.5</string>
 	<key>CFBundleGetInfoString</key>

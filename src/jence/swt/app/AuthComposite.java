@@ -1,16 +1,16 @@
 /**
  * MIT LICENSE
  * 
- * Copyright © 2021 Jence, Ejaz Jamil.
+ * Copyright ï¿½ 2021 Jence, Ejaz Jamil.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
- * files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, 
+ * files (the ï¿½Softwareï¿½), to deal in the Software without restriction, including without limitation the rights to use, copy, 
  * modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the 
  * Software is furnished to do so, subject to the following conditions:
  * 
  * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
  * 
- * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE 
+ * THE SOFTWARE IS PROVIDED ï¿½AS ISï¿½, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE 
  * WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR 
  * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR 
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. 
@@ -296,10 +296,10 @@ public class AuthComposite extends Composite {
 			data_.setText("00");
 		int data = Integer.parseInt(data_.getText(), 16);
 
-		byte b0 = (byte) ((int) block0_.getData());
-		byte b1 = (byte) ((int) block1_.getData());
-		byte b2 = (byte) ((int) block2_.getData());
-		byte b3 = (byte) ((int) trailer_.getData());
+		byte b0 = (byte) ((Integer) block0_.getData()).byteValue();
+		byte b1 = (byte) ((Integer) block1_.getData()).byteValue();
+		byte b2 = (byte) ((Integer) block2_.getData()).byteValue();
+		byte b3 = (byte) ((Integer) trailer_.getData()).byteValue();
 
 		byte[] accessbits = generateAccessBits(b0, b1, b2, b3, data);
 		String z = "";
@@ -335,13 +335,13 @@ public class AuthComposite extends Composite {
 	private void loadSelection() {
 		int selection = 0;
 		if (block0_.getSelection()) {
-			selection = (int) block0_.getData();
+			selection = (Integer) block0_.getData();
 		} else if (block1_.getSelection()) {
-			selection = (int) block1_.getData();
+			selection = (Integer) block1_.getData();
 		} else if (block2_.getSelection()) {
-			selection = (int) block2_.getData();
+			selection = (Integer) block2_.getData();
 		} else if (trailer_.getSelection()) {
-			selection = (int) trailer_.getData();
+			selection = (Integer) trailer_.getData();
 		}
 		table_1.setSelection(selection);
 	}

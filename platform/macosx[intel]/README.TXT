@@ -28,3 +28,8 @@ KNOWN ISSUES
    - place it in the current directory.
    - reboot the PC
 2. Screen going blank during scan. This can be resolved by rebooting PC.
+
+APP
+===
+The NfcApp application will work only on Intel based Mac. If you have Arm based M1 Mac, use the macosx/NfcApp which is located in that directory.
+

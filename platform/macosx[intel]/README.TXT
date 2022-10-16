@@ -1,3 +1,8 @@
+DRIVER
+======
+If you have Mac OS X 10.11 or earlier, you may have to download the VCP driver from the following link: https://community.silabs.com/s/article/legacy-os-software-and-driver-packages?language=en_US
+If you have later version of Mac OS X, then download the driver from the following link: https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers?tab=downloads
+
 BUILD
 =====
 Open the project associated with this folder into Eclipse or your preferred Java IDE. The simply run the class Jence.swt.app.NfcApp. Make sure that all files in the lib/ folder is in build path.

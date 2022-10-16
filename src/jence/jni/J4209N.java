@@ -161,14 +161,10 @@ public class J4209N {
 	
 	public String[] listPorts() throws Exception {
 		check();
-		byte[] ports = new byte[256*8];
+		byte[] ports = new byte[2048];
 		int n = AvailablePorts(ports);
-		String[] s = new String[n];
-		byte[] port = new byte[8];
-		for(int i=0;i<n;i++) {
-			port = Arrays.copyOfRange(ports, i*8, i*8+8);
-			s[i] = new String(port, "UTF-8").trim();
-		}
+		String z = new String(ports, "UTF-8");
+		String[] s = z.split("\n",n);
 		return s;
 	}
 	

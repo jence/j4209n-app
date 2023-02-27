@@ -104,6 +104,7 @@ public class J4209N {
 	private native byte NdefFormat();
 	private native byte NdefAddUri(byte[] uri);
 	private native byte NdefAddText(byte[] text);
+	private native byte NdefAddMime(byte[] type, byte[] mime);
 	private native byte NdefErase();
 	private native int  NdefRead();
 	private native byte NdefReadBlock(int block, byte[] data, int[] size);
@@ -217,6 +218,16 @@ public class J4209N {
 		byte[] data = createNullTerminatedString(text);
 		if (NdefAddText(data) == 0) {
 			throw new Exception("Failed to add NDEF record: TEXT addition failed.");
+		}
+	}
+
+	public void ndefAddVcard(Vcard vcard) throws Exception {
+		check();
+		byte[] type = createNullTerminatedString("text/vcard");
+		byte[] mime = createNullTerminatedString(vcard.toVcard());
+		System.out.println(vcard.toVcard());
+		if (NdefAddMime(type, mime) == 0) {
+			throw new Exception("Failed to add NDEF record.");
 		}
 	}
 

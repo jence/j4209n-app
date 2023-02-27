@@ -29,7 +29,12 @@ import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSession;
+
 import jence.jni.J4209N;
+import jence.jni.Vcard;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.TableEditor;
@@ -124,7 +129,7 @@ public class NfcAppComposite extends Composite {
 	private Timer timer_ = null;
 
 	public static final String DOWNLOAD_PAGE = "https://jence.com/web/index.php?route=product/product&path=69_20_232&product_id=793";
-	public static final String LATEST_VERSION_PAGE = "http://jence.com/downloads/version.properties";
+	public static final String LATEST_VERSION_PAGE = "https://jence.com/downloads/version.properties";
 	private Button btnSave_;
 
 	private int prompt(String text, int style) {
@@ -144,7 +149,20 @@ public class NfcAppComposite extends Composite {
 	private void checkVersion() {
 		try {
 			URL url = new URL(LATEST_VERSION_PAGE);
-			URLConnection con = url.openConnection();
+			URLConnection con;
+			if (LATEST_VERSION_PAGE.startsWith("https")) {
+				HttpsURLConnection scon = (HttpsURLConnection)url.openConnection();
+				// avoid the annoying certificate error if it occurs.
+				scon.setHostnameVerifier(new HostnameVerifier() {
+					@Override
+					public boolean verify(String arg0, SSLSession arg1) {
+						return true;
+					}
+				  });
+				con = scon;
+			} else {
+				con = url.openConnection();
+			}
 			InputStream stream = con.getInputStream();
 			Properties properties = new Properties();
 			properties.load(stream);
@@ -238,6 +256,8 @@ public class NfcAppComposite extends Composite {
 							text.setText(item.getText(i));
 							text.selectAll();
 							text.setFocus();
+							String s = item.getText(i);
+							status("Value: "+s+" (Hex), "+((char)Integer.parseInt(s, 16))+" (Ascii)");
 							return;
 						}
 						if (!visible && rect.intersects(clientArea)) {
@@ -450,6 +470,7 @@ public class NfcAppComposite extends Composite {
 		btnNdefFormat_.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent arg0) {
+				prompt("For format operation to work successfully, first scan the card, then hit this button.", SWT.OK);
 				if (ndefFormat()) {
 					prompt("Format complete.", SWT.OK);
 				}
@@ -640,7 +661,7 @@ public class NfcAppComposite extends Composite {
 		lblVersion_.setBounds(0, 0, 55, 15);
 		lblVersion_.setText("Library Version : "+NfcApp.driver_.LibraryVersion()+" | "+"Version: " + NfcApp.VERSION);
 		new Label(this, SWT.NONE);
-
+		
 		// this.pack();
 		checkVersion();
 	}
@@ -997,7 +1018,8 @@ public class NfcAppComposite extends Composite {
 			}
 			NfcApp.driver_.format();
 			ndeftable_.removeAll();
-			prompt("Clean operation completed. Verify by rescanning the card/tag.?",
+			prompt("Clean operation completed. Verify by rescanning the card/tag.? Most of the memory content will be zero. " +
+					"If some portion of the memory is not set to zero, try again.",
 					SWT.OK );
 		} catch (Exception e) {
 			prompt(e.getMessage(), SWT.ICON_WARNING);
@@ -1011,7 +1033,7 @@ public class NfcAppComposite extends Composite {
 		NDEFComposite composite = new NDEFComposite(dialog, SWT.NONE);
 		dialog.setLayout(new GridLayout(1, true));
 		composite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
-		dialog.setBounds(new Rectangle(0, 0, 600, 400));
+		dialog.setBounds(new Rectangle(0, 0, 800, 600));
 
 		composite.callback(new Callback() {
 			@Override
@@ -1057,6 +1079,11 @@ public class NfcAppComposite extends Composite {
 					NfcApp.driver_.ndefAddUri("mailto://"+text);
 					status("email written successfully.");
 					break; // email
+				case 5:
+					Vcard vcard = new Vcard(text);
+					NfcApp.driver_.ndefAddVcard(vcard);
+					status("Vcard written successfully.");
+					break; // vcard
 				}
 			}
 		});

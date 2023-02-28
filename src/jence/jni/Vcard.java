@@ -98,13 +98,13 @@ public class Vcard {
 	public String version_ = "3.0";
 
 	public Vcard(String vcard) {
-		System.out.println(vcard);
+		//System.out.println(vcard);
 		int n = vcard.indexOf("BEGIN:VCARD\n");
 		String s = vcard.substring(n);
 		final Properties p = new Properties();
 	    try {
 			p.load(new StringReader(s));
-			System.out.println(p);
+			//System.out.println(p);
 
 			version_ = p.getProperty("VERSION");
 			

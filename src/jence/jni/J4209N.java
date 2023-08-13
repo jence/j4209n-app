@@ -287,6 +287,7 @@ public class J4209N {
 	 */
 	public void open(String comPort) throws Exception {
 		check();
+		comPort = comPort.trim();
 		comPort += "\0";
 		byte[] port = comPort.getBytes("UTF-8");
 		byte ok = OpenPort(port);

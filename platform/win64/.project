@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>j4209n-app-win64</name>
+	<name>j4209n-app-win64(dev)</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -18,7 +18,7 @@
 		<link>
 			<name>src</name>
 			<type>2</type>
-			<location>D:/Work/workspace/j4209n-app/src</location>
+			<location>C:/WORK/_Scratch/j4209n-app/src</location>
 		</link>
 	</linkedResources>
 </projectDescription>

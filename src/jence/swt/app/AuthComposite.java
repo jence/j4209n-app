@@ -753,7 +753,7 @@ public class AuthComposite extends Composite {
 				false, 2, 1));
 		loadSectorTrailerSettings(0);
 
-		this.getShell().pack();
+//		this.getShell().pack();
 	}
 
 	public void callback(Callback runnable) {

@@ -1098,8 +1098,9 @@ public class NfcAppComposite extends Composite {
 		AuthComposite composite = new AuthComposite(dialog, SWT.NONE);
 		dialog.setLayout(new GridLayout(1, true));
 		composite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
-		dialog.setBounds(new Rectangle(0, 0, 600, 400));
-
+//		dialog.setBounds(new Rectangle(0, 0, 600, 400));
+		dialog.pack();
+		
 		composite.callback(new Callback() {
 			@Override
 			public void callback(int option, int selection, String text) throws Exception {

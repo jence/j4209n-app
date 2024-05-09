@@ -29,12 +29,15 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
+import org.eclipse.wb.swt.SWTResourceManager;
 
 import jence.jni.J4209N;
 import jence.swt.app.NfcApp;
+import jence.swt.app.NfcAppComposite;
 
 import javax.swing.JSpinner;
 import javax.swing.JCheckBox;
@@ -638,6 +641,18 @@ public class NfcAppFrame extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				authDialog = new AuthFrame(NfcAppFrame.this);
 				authDialog.setVisible(true);
+				
+//				for (int i = 0; i < table_1.getItemCount(); i++) {
+//					table_1.getItem(i).setImage((Image) null);
+//				}
+//				TableItem item = (TableItem) arg0.item;
+//
+//				item.setImage(SWTResourceManager.getImage(
+//						NfcAppComposite.class, "/jence/icon/checkbox16.png"));
+//				arg0.doit = true;
+//				saveSelection();
+//				updateAccessBits();
+
 			}
 		});
 		btnAuth_.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/key.png")));

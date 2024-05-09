@@ -6,16 +6,46 @@ import java.awt.BorderLayout;
 import java.awt.GridBagLayout;
 import java.awt.GridBagConstraints;
 import java.awt.Insets;
+import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
+
 import javax.swing.JLabel;
 import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.JButton;
 import javax.swing.ImageIcon;
 import javax.swing.JTable;
 import javax.swing.JScrollPane;
 import javax.swing.JRadioButton;
 import javax.swing.border.TitledBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.PlainDocument;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.widgets.TableItem;
+import org.eclipse.wb.swt.SWTResourceManager;
+
+import jence.jni.J4209N;
+import jence.swt.app.NfcAppComposite;
+
 import javax.swing.ButtonGroup;
 import javax.swing.border.EmptyBorder;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.DropMode;
+import java.awt.Color;
+import java.awt.Component;
+
+import javax.swing.border.LineBorder;
+import java.awt.Dimension;
 
 public class AuthFrame extends JDialog {
 
@@ -23,25 +53,273 @@ public class AuthFrame extends JDialog {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	private JTextField textField;
-	private JTextField textField_1;
-	private JTextField textField_2;
-	private JTextField textField_3;
+	private JTextField asciiA_;
+	private JTextField hexA_;
+	private JTextField asciiB_;
+	private JTextField hexB_;
 	private JTable table;
-	private final ButtonGroup buttonGroup = new ButtonGroup();
-	private JTextField textField_4;
-	private JTextField textField_5;
-	private JTextField textField_6;
+	private AuthTableModel model;
+	private final ButtonGroup blockGroup_ = new ButtonGroup();
+	private JTextField data_;
+	private JTextField accessbits_;
+	private JTextField trailerbits_;
+	private JRadioButton block0_;
+	private JRadioButton block1_;
+	private JRadioButton block2_;
+	private JRadioButton trailer_;
+
+	
+	private String ascii2hex(String str) {
+		try {
+			str = "\0\0\0\0\0\0" + str;
+			byte[] t = str.getBytes("UTF-8");
+			String text = "";
+			for (int i = 0; i < t.length; i++) {
+				text += String.format("%02X", t[i]);
+			}
+			return text.substring(text.length() - 12);
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	
+	private String getHex2Ascii(String hex) {
+		BigInteger bd = new BigInteger(hex, 16);
+		byte[] b = bd.toByteArray();
+		String ascii = "";
+		for (int i = 0; i < b.length; i++) {
+			if (b[i] > (byte) 32 && b[i] < (byte) 127) {
+				ascii += (char) b[i];
+			} else {
+				return ascii;
+			}
+		}
+		return ascii;
+	}
+
+	private void parseSectorTrailer(String trailer) {
+		int n = trailer.indexOf(' ');
+		String keyA = trailer.substring(0, n).trim();
+		int n1 = trailer.indexOf(' ', n + 1);
+		String accessbits = trailer.substring(n, n1).trim();
+		String keyB = trailer.substring(n1).trim();
+
+		asciiA_.setText(getHex2Ascii(keyA));
+		asciiB_.setText(getHex2Ascii(keyB));
+		hexA_.setText(keyA);
+		hexB_.setText(keyB);
+		accessbits_.setText(accessbits);
+		data_.setText(accessbits.substring(6));
+		
+//		updateRadioFromAccessBits(accessbits);
+	}
+
+//	private void updateRadioFromAccessBits(String accessbits) {
+//		BigInteger bi = new BigInteger(accessbits, 16);
+//		// b0 = 100, b1 = 101, b2 = 110, b3 = 111
+//		byte[] b = bi.toByteArray();
+//		// 1111 1010 1100
+//		// int byte6 = b[3] & 0xFF;
+//		int byte7 = b[1] & 0xFF; // 0xF0;
+//		int byte8 = b[2] & 0xFF; // 0xAC;
+//
+//		int c1 = (byte7) >> 4;
+//		int c2 = (byte8 & 0x0F);
+//		int c3 = (byte8 >> 4);
+//
+//		int block0 = ((c1 & 0x01) << 2) | ((c2 & 0x01) << 1) | (c3 & 0x01);
+//		int block1 = ((c1 & 0x02) << 1) | ((c2 & 0x02) << 0)
+//				| ((c3 & 0x02) >> 1);
+//		int block2 = ((c1 & 0x04) << 0) | ((c2 & 0x04) >> 1)
+//				| ((c3 & 0x04) >> 2);
+//		int trailer = ((c1 & 0x08) >> 1) | ((c2 & 0x08) >> 2)
+//				| ((c3 & 0x08) >> 3);
+//
+//		block0_.setData(new Integer(block0));
+//		block1_.setData(new Integer(block1));
+//		block2_.setData(new Integer(block2));
+//		trailer_.setData(new Integer(trailer));
+//
+//		loadSectorTrailerSettings(0);
+//	}
+//
+	
+	
+//	private void loadSelection() {
+//		int selection = 0;
+//		if (block0_.getSelection()) {
+//			selection = (Integer) block0_.getData();
+//		} else if (block1_.getSelection()) {
+//			selection = (Integer) block1_.getData();
+//		} else if (block2_.getSelection()) {
+//			selection = (Integer) block2_.getData();
+//		} else if (trailer_.getSelection()) {
+//			selection = (Integer) trailer_.getData();
+//		}
+//		table_1.setSelection(selection);
+//	}
+//
+//	private void saveSelection() {
+//		int selection = table_1.getSelectionIndex();
+//		if (selection == -1) {
+//			table_1.setSelection(0);
+//		}
+//		if (block0_.getSelection()) {
+//			block0_.setData(selection);
+//		} else if (block1_.getSelection()) {
+//			block1_.setData(selection);
+//		} else if (block2_.getSelection()) {
+//			block2_.setData(selection);
+//		} else if (trailer_.getSelection()) {
+//			trailer_.setData(selection);
+//		}
+//	}
+//
+	
+	
+	private void loadSelection() {
+	    int selection = 0;
+	    if (table.getSelectedRow() < -1) {
+	    	return;
+	    }
+	    if (block0_.isSelected()) {
+	        selection = (Integer) block0_.getClientProperty("selection");
+	    } else if (block1_.isSelected()) {
+	        selection = (Integer) block1_.getClientProperty("selection");
+	    } else if (block2_.isSelected()) {
+	        selection = (Integer) block2_.getClientProperty("selection");
+	    } else if (trailer_.isSelected()) {
+	        selection = (Integer) trailer_.getClientProperty("selection");
+	    }
+	    table.setRowSelectionInterval(selection, selection);
+	}
+
+	private void saveSelection() {
+	    int selection = table.getSelectedRow();
+	    if (selection == -1) {
+	        selection = 0;
+	    }
+	    if (block0_.isSelected()) {
+	        block0_.putClientProperty("selection", selection);
+	    } else if (block1_.isSelected()) {
+	        block1_.putClientProperty("selection", selection);
+	    } else if (block2_.isSelected()) {
+	        block2_.putClientProperty("selection", selection);
+	    } else if (trailer_.isSelected()) {
+	        trailer_.putClientProperty("selection", selection);
+	    }
+	}
+
+	
+	private void loadSectorTrailerSettings(int block) {
+        model.setRowCount(0); // Clear table
+
+        if (block == 3) {
+            model.addRow(new Object[]{"000", "Write with Key A", "Read with Key A", "R/W with Key A"});
+            model.addRow(new Object[]{"001", "Write with Key A", "R/W with Key A", "R/W with Key A"});
+            model.addRow(new Object[]{"010", "Cannot R/W", "Read with Key A", "Read with Key A"});
+            model.addRow(new Object[]{"011", "Write with Key B", "Read with Key A, R/W with Key B", "Write with Key B"});
+            model.addRow(new Object[]{"100", "Write with Key B", "Read with Key A or B", "Write with Key B"});
+            model.addRow(new Object[]{"101", "Cannot R/W", "Read with Key A, R/W with Key B", "Cannot R/W"});
+            model.addRow(new Object[]{"110", "Cannot R/W", "Read with Key A or B", "Cannot R/W"});
+            model.addRow(new Object[]{"111", "Cannot R/W", "Read with Key A or B", "Cannot R/W"});
+        } else {
+            model.addRow(new Object[]{"000", "R/W with Key A | B", "Key A | B", "Key A | B"});
+            model.addRow(new Object[]{"001", "Read with Key A | B", "-", "Key A | B"});
+            model.addRow(new Object[]{"010", "Read with Key A | B", "-", "-"});
+            model.addRow(new Object[]{"011", "R/W with Key B", "-", "-"});
+            model.addRow(new Object[]{"100", "R/W with Key B, Read with Key A", "-", "-"});
+            model.addRow(new Object[]{"101", "Read with Key B", "-", "-"});
+            model.addRow(new Object[]{"110", "R/W with Key B, Read with Key A", "Key B", "Key A | B"});
+            model.addRow(new Object[]{"111", "-", "-", "-"});
+        }
+        table.setModel(model);
+        
+//		table.setRowSelectionInterval(0, 0); // select a row so that no null pointer occurs at fetching
+
+
+//		loadSelection();
+//		table_1.getSelection()[0].setImage(SWTResourceManager.getImage(
+//				NfcAppComposite.class, "/jence/icon/checkbox16.png"));
+//		updateAccessBits();
+	}
+
+	
+	private byte[] generateAccessBits(byte block0, byte block1, byte block2,
+			byte block3, int data) {
+		int c1_0 = (block0 & 0x04) >> 2;
+		int c2_0 = (block0 & 0x02) >> 1;
+		int c3_0 = (block0 & 0x01);
+
+		int c1_1 = (block1 & 0x04) >> 2;
+		int c2_1 = (block1 & 0x02) >> 1;
+		int c3_1 = block1 & 0x01;
+
+		int c1_2 = (block2 & 0x04) >> 2;
+		int c2_2 = (block2 & 0x02) >> 1;
+		int c3_2 = block2 & 0x01;
+
+		int c1_3 = (block3 & 0x04) >> 2;
+		int c2_3 = (block3 & 0x02) >> 1;
+		int c3_3 = block3 & 0x01;
+
+		int c1 = 8 * c1_3 + 4 * c1_2 + 2 * c1_1 + c1_0;
+		int c2 = 8 * c2_3 + 4 * c2_2 + 2 * c2_1 + c2_0;
+		int c3 = 8 * c3_3 + 4 * c3_2 + 2 * c3_1 + c3_0;
+
+		int byte7 = (c1 << 4) | (~c3 & 0x0F);
+		int byte8 = (c3 << 4) | c2;
+		int byte6 = ((~c2 & 0x0F) << 4) | (~c1 & 0x0F);
+		int byte9 = (byte) data;
+
+		byte[] accessbits = { (byte) byte6, (byte) byte7, (byte) byte8,
+				(byte) byte9 };
+
+		return accessbits;
+	}
+
+	
+//	private void updateAccessBits() {
+//		if (data_.getText().trim().length() == 0)
+//			data_.setText("00");
+//		int data = Integer.parseInt(data_.getText(), 16);
+//
+//		byte b0 = (byte) ((Integer) block0_.getData()).byteValue();
+//		byte b1 = (byte) ((Integer) block1_.getData()).byteValue();
+//		byte b2 = (byte) ((Integer) block2_.getData()).byteValue();
+//		byte b3 = (byte) ((Integer) trailer_.getData()).byteValue();
+//
+//		byte[] accessbits = generateAccessBits(b0, b1, b2, b3, data);
+//		String z = "";
+//		for (int i = 0; i < accessbits.length; i++) {
+//			z += String.format("%02X", accessbits[i]);
+//		}
+//		accessbits_.setText(z);
+//
+//		trailerbits_.setText(hexA_.getText() + " " + accessbits_.getText()
+//				+ " " + hexB_.getText());
+//
+//		key_ = new J4209N.KeyData(b3);
+//		key_.KeyA = hex2bytes(hexA_.getText(), 6);
+//		key_.KeyB = hex2bytes(hexB_.getText(), 6);
+//
+//	}
+
 
 	public AuthFrame(NfcAppFrame parent) {
+		
+		super(parent, "Auth", true);
 		GridBagLayout gridBagLayout = new GridBagLayout();
 		gridBagLayout.columnWidths = new int[]{434, 0};
 		gridBagLayout.rowHeights = new int[]{10, 0, 0, 0, 0};
 		gridBagLayout.columnWeights = new double[]{1.0, Double.MIN_VALUE};
-		gridBagLayout.rowWeights = new double[]{0.0, 0.0, 1.0, 1.0, Double.MIN_VALUE};
+		gridBagLayout.rowWeights = new double[]{0.0, 1.0, 0.0, 0.0, Double.MIN_VALUE};
 		getContentPane().setLayout(gridBagLayout);
 		
 		JPanel panelKey = new JPanel();
+		panelKey.setBorder(new EmptyBorder(8, 10, 8, 10));
 		GridBagConstraints gbc_panelKey = new GridBagConstraints();
 		gbc_panelKey.fill = GridBagConstraints.BOTH;
 		gbc_panelKey.insets = new Insets(0, 0, 5, 0);
@@ -70,14 +348,43 @@ public class AuthFrame extends JDialog {
 		gbc_lblNewLabel_1.gridy = 0;
 		panelKey.add(lblNewLabel_1, gbc_lblNewLabel_1);
 		
-		textField = new JTextField();
-		GridBagConstraints gbc_textField = new GridBagConstraints();
-		gbc_textField.fill = GridBagConstraints.HORIZONTAL;
-		gbc_textField.insets = new Insets(0, 0, 5, 5);
-		gbc_textField.gridx = 2;
-		gbc_textField.gridy = 0;
-		panelKey.add(textField, gbc_textField);
-		textField.setColumns(10);
+		asciiA_ = new JTextField(6);
+		asciiA_.setDocument(new JTextFieldLimit(6));
+		
+		asciiA_.getDocument().addDocumentListener(new DocumentListener() {
+			@Override
+			public void insertUpdate(DocumentEvent e) {
+				// Text inserted
+				SwingUtilities.invokeLater(() -> {
+					hexA_.setText(ascii2hex(asciiA_.getText()));
+//					updateAccessBits();
+				});
+
+			}
+
+			@Override
+			public void removeUpdate(DocumentEvent e) {
+				// Text removed
+				SwingUtilities.invokeLater(() -> {
+					hexA_.setText(ascii2hex(asciiA_.getText()));
+//					updateAccessBits();
+
+				});
+
+			}
+
+			@Override
+			public void changedUpdate(DocumentEvent e) {
+				// Style change (not applicable for plain text components)
+			}
+		});
+
+		GridBagConstraints gbc_asciiA_ = new GridBagConstraints();
+		gbc_asciiA_.fill = GridBagConstraints.HORIZONTAL;
+		gbc_asciiA_.insets = new Insets(0, 0, 5, 5);
+		gbc_asciiA_.gridx = 2;
+		gbc_asciiA_.gridy = 0;
+		panelKey.add(asciiA_, gbc_asciiA_);
 		
 		JLabel lblNewLabel_2 = new JLabel("Hex");
 		GridBagConstraints gbc_lblNewLabel_2 = new GridBagConstraints();
@@ -87,22 +394,31 @@ public class AuthFrame extends JDialog {
 		gbc_lblNewLabel_2.gridy = 0;
 		panelKey.add(lblNewLabel_2, gbc_lblNewLabel_2);
 		
-		textField_1 = new JTextField();
-		GridBagConstraints gbc_textField_1 = new GridBagConstraints();
-		gbc_textField_1.insets = new Insets(0, 0, 5, 5);
-		gbc_textField_1.fill = GridBagConstraints.HORIZONTAL;
-		gbc_textField_1.gridx = 4;
-		gbc_textField_1.gridy = 0;
-		panelKey.add(textField_1, gbc_textField_1);
-		textField_1.setColumns(10);
+		hexA_ = new JTextField();
+		hexA_.setText("FFFFFFFFFFFF");
+		GridBagConstraints gbc_hexA_ = new GridBagConstraints();
+		gbc_hexA_.insets = new Insets(0, 0, 5, 5);
+		gbc_hexA_.fill = GridBagConstraints.HORIZONTAL;
+		gbc_hexA_.gridx = 4;
+		gbc_hexA_.gridy = 0;
+		panelKey.add(hexA_, gbc_hexA_);
+		hexA_.setColumns(10);
 		
-		JButton btnNewButton = new JButton("Default");
-		btnNewButton.setIcon(new ImageIcon(AuthFrame.class.getResource("/jence/icon/default16.png")));
-		GridBagConstraints gbc_btnNewButton = new GridBagConstraints();
-		gbc_btnNewButton.insets = new Insets(0, 0, 5, 0);
-		gbc_btnNewButton.gridx = 5;
-		gbc_btnNewButton.gridy = 0;
-		panelKey.add(btnNewButton, gbc_btnNewButton);
+		JButton btnDefault_A = new JButton("Default");
+		btnDefault_A.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+					hexA_.setText("FFFFFFFFFFFF");
+//					updateAccessBits();
+			}
+		});
+		
+		
+		btnDefault_A.setIcon(new ImageIcon(AuthFrame.class.getResource("/jence/icon/default16.png")));
+		GridBagConstraints gbc_btnDefault_A = new GridBagConstraints();
+		gbc_btnDefault_A.insets = new Insets(0, 0, 5, 0);
+		gbc_btnDefault_A.gridx = 5;
+		gbc_btnDefault_A.gridy = 0;
+		panelKey.add(btnDefault_A, gbc_btnDefault_A);
 		
 		JLabel lblNewLabel_3 = new JLabel("Key B");
 		GridBagConstraints gbc_lblNewLabel_3 = new GridBagConstraints();
@@ -119,14 +435,45 @@ public class AuthFrame extends JDialog {
 		gbc_lblNewLabel_4.gridy = 1;
 		panelKey.add(lblNewLabel_4, gbc_lblNewLabel_4);
 		
-		textField_2 = new JTextField();
-		GridBagConstraints gbc_textField_2 = new GridBagConstraints();
-		gbc_textField_2.insets = new Insets(0, 0, 0, 5);
-		gbc_textField_2.fill = GridBagConstraints.HORIZONTAL;
-		gbc_textField_2.gridx = 2;
-		gbc_textField_2.gridy = 1;
-		panelKey.add(textField_2, gbc_textField_2);
-		textField_2.setColumns(10);
+		asciiB_ = new JTextField(6);
+		asciiB_.setDocument(new JTextFieldLimit(6));
+		
+		asciiB_.getDocument().addDocumentListener(new DocumentListener() {
+			@Override
+			public void insertUpdate(DocumentEvent e) {
+				// Text inserted
+				SwingUtilities.invokeLater(() -> {
+					hexB_.setText(ascii2hex(asciiB_.getText()));
+//					updateAccessBits();
+					
+				});
+
+			}
+
+			@Override
+			public void removeUpdate(DocumentEvent e) {
+				// Text removed
+				SwingUtilities.invokeLater(() -> {
+					hexB_.setText(ascii2hex(asciiB_.getText()));
+//					updateAccessBits();
+				});
+
+			}
+
+			@Override
+			public void changedUpdate(DocumentEvent e) {
+				// Style change (not applicable for plain text components)
+			}
+		});
+
+		
+		GridBagConstraints gbc_asciiB_ = new GridBagConstraints();
+		gbc_asciiB_.insets = new Insets(0, 0, 0, 5);
+		gbc_asciiB_.fill = GridBagConstraints.HORIZONTAL;
+		gbc_asciiB_.gridx = 2;
+		gbc_asciiB_.gridy = 1;
+		panelKey.add(asciiB_, gbc_asciiB_);
+		asciiB_.setColumns(10);
 		
 		JLabel lblNewLabel_5 = new JLabel("Hex");
 		GridBagConstraints gbc_lblNewLabel_5 = new GridBagConstraints();
@@ -136,47 +483,99 @@ public class AuthFrame extends JDialog {
 		gbc_lblNewLabel_5.gridy = 1;
 		panelKey.add(lblNewLabel_5, gbc_lblNewLabel_5);
 		
-		textField_3 = new JTextField();
-		GridBagConstraints gbc_textField_3 = new GridBagConstraints();
-		gbc_textField_3.insets = new Insets(0, 0, 0, 5);
-		gbc_textField_3.fill = GridBagConstraints.HORIZONTAL;
-		gbc_textField_3.gridx = 4;
-		gbc_textField_3.gridy = 1;
-		panelKey.add(textField_3, gbc_textField_3);
-		textField_3.setColumns(10);
+		hexB_ = new JTextField();
+		hexB_.setText("FFFFFFFFFFFF");
+		GridBagConstraints gbc_hexB_ = new GridBagConstraints();
+		gbc_hexB_.insets = new Insets(0, 0, 0, 5);
+		gbc_hexB_.fill = GridBagConstraints.HORIZONTAL;
+		gbc_hexB_.gridx = 4;
+		gbc_hexB_.gridy = 1;
+		panelKey.add(hexB_, gbc_hexB_);
+		hexB_.setColumns(10);
 		
-		JButton btnNewButton_1 = new JButton("Default");
-		btnNewButton_1.setIcon(new ImageIcon(AuthFrame.class.getResource("/jence/icon/default16.png")));
-		GridBagConstraints gbc_btnNewButton_1 = new GridBagConstraints();
-		gbc_btnNewButton_1.gridx = 5;
-		gbc_btnNewButton_1.gridy = 1;
-		panelKey.add(btnNewButton_1, gbc_btnNewButton_1);
+		JButton btnDefault_B = new JButton("Default");
+		btnDefault_B.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				
+					hexB_.setText("FFFFFFFFFFFF");
+//					updateAccessBits();
+
+			}
+		});
+		btnDefault_B.setIcon(new ImageIcon(AuthFrame.class.getResource("/jence/icon/default16.png")));
+		GridBagConstraints gbc_btnDefault_B = new GridBagConstraints();
+		gbc_btnDefault_B.gridx = 5;
+		gbc_btnDefault_B.gridy = 1;
+		panelKey.add(btnDefault_B, gbc_btnDefault_B);
 		
-		JPanel panel = new JPanel();
-		GridBagConstraints gbc_panel = new GridBagConstraints();
-		gbc_panel.insets = new Insets(0, 0, 5, 0);
-		gbc_panel.fill = GridBagConstraints.BOTH;
-		gbc_panel.gridx = 0;
-		gbc_panel.gridy = 1;
-		getContentPane().add(panel, gbc_panel);
-		GridBagLayout gbl_panel = new GridBagLayout();
-		gbl_panel.columnWidths = new int[]{452, 0};
-		gbl_panel.rowHeights = new int[]{200, 0};
-		gbl_panel.columnWeights = new double[]{1.0, Double.MIN_VALUE};
-		gbl_panel.rowWeights = new double[]{1.0, Double.MIN_VALUE};
-		panel.setLayout(gbl_panel);
+		JPanel panelTable = new JPanel();
+		panelTable.setBorder(new EmptyBorder(0, 10, 8, 10));
+		panelTable.setBackground(new Color(240, 240, 240));
+		GridBagConstraints gbc_panelTable = new GridBagConstraints();
+		gbc_panelTable.insets = new Insets(0, 0, 5, 0);
+		gbc_panelTable.fill = GridBagConstraints.BOTH;
+		gbc_panelTable.gridx = 0;
+		gbc_panelTable.gridy = 1;
+		getContentPane().add(panelTable, gbc_panelTable);
+		GridBagLayout gbl_panelTable = new GridBagLayout();
+		gbl_panelTable.rowHeights = new int[]{0};
+		gbl_panelTable.columnWeights = new double[]{1.0};
+		gbl_panelTable.rowWeights = new double[]{1.0};
+		panelTable.setLayout(gbl_panelTable);
 		
 		JScrollPane scrollPane = new JScrollPane();
+		scrollPane.setViewportBorder(new LineBorder(new Color(0, 0, 0)));
+		scrollPane.setBackground(new Color(0, 0, 255));
 		GridBagConstraints gbc_scrollPane = new GridBagConstraints();
 		gbc_scrollPane.fill = GridBagConstraints.BOTH;
 		gbc_scrollPane.gridx = 0;
 		gbc_scrollPane.gridy = 0;
-		panel.add(scrollPane, gbc_scrollPane);
+		panelTable.add(scrollPane, gbc_scrollPane);
 		
 		table = new JTable();
+		table.setPreferredScrollableViewportSize(new Dimension(450, 150));
+        
+	     // Data initialization
+        Object[][] data = {
+
+        };
+
+        // Column names
+        String[] columnNames = {
+                "Access Bits", "Key A", "Access Bit Property", "Key B"
+        };
+
+        // Create table model
+         model = new AuthTableModel(table, data, columnNames) {
+            Class[] columnTypes = {String.class, String.class, String.class, String.class};
+
+            @Override
+            public Class getColumnClass(int columnIndex) {
+                return columnTypes[columnIndex];
+            }
+        };
+		
+		table.setModel(new DefaultTableModel(
+			new Object[][] {
+			},
+			new String[] {
+				"Access Bits", "Key A", "Access Bit Property", "Key B"
+			}
+		) {
+			Class[] columnTypes = new Class[] {
+				String.class, String.class, String.class, String.class
+			};
+			public Class getColumnClass(int columnIndex) {
+				return columnTypes[columnIndex];
+			}
+		});
+		
+        table.getColumnModel().getColumn(0).setCellRenderer(new IconCellRenderer(table));
+
 		scrollPane.setViewportView(table);
 		
 		JPanel panel_4 = new JPanel();
+		panel_4.setBorder(new EmptyBorder(0, 8, 8, 8));
 		GridBagConstraints gbc_panel_4 = new GridBagConstraints();
 		gbc_panel_4.insets = new Insets(0, 0, 5, 0);
 		gbc_panel_4.fill = GridBagConstraints.BOTH;
@@ -205,41 +604,63 @@ public class AuthFrame extends JDialog {
 		gbl_panel_2.rowWeights = new double[]{0.0, 0.0, Double.MIN_VALUE};
 		panel_2.setLayout(gbl_panel_2);
 		
-		JRadioButton rdbtnNewRadioButton = new JRadioButton("Block 0");
-		buttonGroup.add(rdbtnNewRadioButton);
-		GridBagConstraints gbc_rdbtnNewRadioButton = new GridBagConstraints();
-		gbc_rdbtnNewRadioButton.insets = new Insets(0, 0, 5, 5);
-		gbc_rdbtnNewRadioButton.gridx = 0;
-		gbc_rdbtnNewRadioButton.gridy = 0;
-		panel_2.add(rdbtnNewRadioButton, gbc_rdbtnNewRadioButton);
+		block0_ = new JRadioButton("Block 0");
+		block0_.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				loadSectorTrailerSettings(0);
+			}
+		});
+		block0_.setSelected(true);
+		blockGroup_.add(block0_);
+		GridBagConstraints gbc_block0_ = new GridBagConstraints();
+		gbc_block0_.insets = new Insets(0, 0, 5, 5);
+		gbc_block0_.gridx = 0;
+		gbc_block0_.gridy = 0;
+		panel_2.add(block0_, gbc_block0_);
 		
-		JRadioButton rdbtnNewRadioButton_1 = new JRadioButton("Block 2");
-		buttonGroup.add(rdbtnNewRadioButton_1);
-		GridBagConstraints gbc_rdbtnNewRadioButton_1 = new GridBagConstraints();
-		gbc_rdbtnNewRadioButton_1.anchor = GridBagConstraints.WEST;
-		gbc_rdbtnNewRadioButton_1.insets = new Insets(0, 0, 5, 0);
-		gbc_rdbtnNewRadioButton_1.gridx = 1;
-		gbc_rdbtnNewRadioButton_1.gridy = 0;
-		panel_2.add(rdbtnNewRadioButton_1, gbc_rdbtnNewRadioButton_1);
+		 block2_ = new JRadioButton("Block 2");
+		block2_.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				loadSectorTrailerSettings(2);
+			}
+		});
+		blockGroup_.add(block2_);
+		GridBagConstraints gbc_block2_ = new GridBagConstraints();
+		gbc_block2_.anchor = GridBagConstraints.WEST;
+		gbc_block2_.insets = new Insets(0, 0, 5, 0);
+		gbc_block2_.gridx = 1;
+		gbc_block2_.gridy = 0;
+		panel_2.add(block2_, gbc_block2_);
 		
-		JRadioButton rdbtnNewRadioButton_2 = new JRadioButton("Block 1");
-		buttonGroup.add(rdbtnNewRadioButton_2);
-		GridBagConstraints gbc_rdbtnNewRadioButton_2 = new GridBagConstraints();
-		gbc_rdbtnNewRadioButton_2.insets = new Insets(0, 0, 0, 5);
-		gbc_rdbtnNewRadioButton_2.gridx = 0;
-		gbc_rdbtnNewRadioButton_2.gridy = 1;
-		panel_2.add(rdbtnNewRadioButton_2, gbc_rdbtnNewRadioButton_2);
+		 block1_ = new JRadioButton("Block 1");
+		block1_.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				loadSectorTrailerSettings(1);
+			}
+		});
+		blockGroup_.add(block1_);
+		GridBagConstraints gbc_block1_ = new GridBagConstraints();
+		gbc_block1_.insets = new Insets(0, 0, 0, 5);
+		gbc_block1_.gridx = 0;
+		gbc_block1_.gridy = 1;
+		panel_2.add(block1_, gbc_block1_);
 		
-		JRadioButton rdbtnNewRadioButton_3 = new JRadioButton("Block 3 (Sector Trailer)");
-		buttonGroup.add(rdbtnNewRadioButton_3);
-		GridBagConstraints gbc_rdbtnNewRadioButton_3 = new GridBagConstraints();
-		gbc_rdbtnNewRadioButton_3.gridx = 1;
-		gbc_rdbtnNewRadioButton_3.gridy = 1;
-		panel_2.add(rdbtnNewRadioButton_3, gbc_rdbtnNewRadioButton_3);
+		 trailer_ = new JRadioButton("Block 3 (Sector Trailer)");
+		trailer_.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				loadSectorTrailerSettings(3);
+			}
+		});
+		blockGroup_.add(trailer_);
+		GridBagConstraints gbc_trailer_ = new GridBagConstraints();
+		gbc_trailer_.gridx = 1;
+		gbc_trailer_.gridy = 1;
+		panel_2.add(trailer_, gbc_trailer_);
+		
 		
 		JPanel panel_3 = new JPanel();
 		GridBagConstraints gbc_panel_3 = new GridBagConstraints();
-		gbc_panel_3.fill = GridBagConstraints.HORIZONTAL;
+		gbc_panel_3.anchor = GridBagConstraints.EAST;
 		gbc_panel_3.gridx = 1;
 		gbc_panel_3.gridy = 0;
 		panel_4.add(panel_3, gbc_panel_3);
@@ -270,7 +691,7 @@ public class AuthFrame extends JDialog {
 		panel_3.add(btnNewButton_6);
 		
 		JPanel panel_1 = new JPanel();
-		panel_1.setBorder(new EmptyBorder(4, 8, 8, 8));
+		panel_1.setBorder(new EmptyBorder(4, 10, 12, 10));
 		GridBagConstraints gbc_panel_1 = new GridBagConstraints();
 		gbc_panel_1.fill = GridBagConstraints.BOTH;
 		gbc_panel_1.gridx = 0;
@@ -291,14 +712,15 @@ public class AuthFrame extends JDialog {
 		gbc_lblNewLabel_6.gridy = 0;
 		panel_1.add(lblNewLabel_6, gbc_lblNewLabel_6);
 		
-		textField_4 = new JTextField();
-		GridBagConstraints gbc_textField_4 = new GridBagConstraints();
-		gbc_textField_4.insets = new Insets(0, 0, 5, 5);
-		gbc_textField_4.fill = GridBagConstraints.HORIZONTAL;
-		gbc_textField_4.gridx = 2;
-		gbc_textField_4.gridy = 0;
-		panel_1.add(textField_4, gbc_textField_4);
-		textField_4.setColumns(10);
+		data_ = new JTextField();
+		data_.setText("00");
+		GridBagConstraints gbc_data_ = new GridBagConstraints();
+		gbc_data_.insets = new Insets(0, 0, 5, 5);
+		gbc_data_.fill = GridBagConstraints.HORIZONTAL;
+		gbc_data_.gridx = 2;
+		gbc_data_.gridy = 0;
+		panel_1.add(data_, gbc_data_);
+		data_.setColumns(10);
 		
 		JLabel lblNewLabel_8 = new JLabel("Access Bit (Generated)");
 		GridBagConstraints gbc_lblNewLabel_8 = new GridBagConstraints();
@@ -308,14 +730,14 @@ public class AuthFrame extends JDialog {
 		gbc_lblNewLabel_8.gridy = 0;
 		panel_1.add(lblNewLabel_8, gbc_lblNewLabel_8);
 		
-		textField_5 = new JTextField();
-		GridBagConstraints gbc_textField_5 = new GridBagConstraints();
-		gbc_textField_5.insets = new Insets(0, 0, 5, 0);
-		gbc_textField_5.fill = GridBagConstraints.HORIZONTAL;
-		gbc_textField_5.gridx = 4;
-		gbc_textField_5.gridy = 0;
-		panel_1.add(textField_5, gbc_textField_5);
-		textField_5.setColumns(10);
+		accessbits_ = new JTextField();
+		GridBagConstraints gbc_accessbits_ = new GridBagConstraints();
+		gbc_accessbits_.insets = new Insets(0, 0, 5, 0);
+		gbc_accessbits_.fill = GridBagConstraints.HORIZONTAL;
+		gbc_accessbits_.gridx = 4;
+		gbc_accessbits_.gridy = 0;
+		panel_1.add(accessbits_, gbc_accessbits_);
+		accessbits_.setColumns(10);
 		
 		JLabel lblNewLabel_7 = new JLabel("Trailer Data");
 		GridBagConstraints gbc_lblNewLabel_7 = new GridBagConstraints();
@@ -326,16 +748,85 @@ public class AuthFrame extends JDialog {
 		gbc_lblNewLabel_7.gridy = 1;
 		panel_1.add(lblNewLabel_7, gbc_lblNewLabel_7);
 		
-		textField_6 = new JTextField();
-		GridBagConstraints gbc_textField_6 = new GridBagConstraints();
-		gbc_textField_6.gridwidth = 2;
-		gbc_textField_6.fill = GridBagConstraints.HORIZONTAL;
-		gbc_textField_6.gridx = 3;
-		gbc_textField_6.gridy = 1;
-		panel_1.add(textField_6, gbc_textField_6);
-		textField_6.setColumns(10);
+		trailerbits_ = new JTextField();
+		trailerbits_.setText("FFFFFFFFFFFF  FFFFFFFFFFFF");
+		GridBagConstraints gbc_trailerbits_ = new GridBagConstraints();
+		gbc_trailerbits_.gridwidth = 2;
+		gbc_trailerbits_.fill = GridBagConstraints.HORIZONTAL;
+		gbc_trailerbits_.gridx = 3;
+		gbc_trailerbits_.gridy = 1;
+		panel_1.add(trailerbits_, gbc_trailerbits_);
+		trailerbits_.setColumns(10);
+//		table.setRowSelectionInterval(0, 0); // select a row so that no null pointer occurs at fetching
+//        table.setColumnSelectionInterval(0, 0);
+
+		loadSectorTrailerSettings(0);
 		
+//		setAlwaysOnTop(true); 
 		this.pack();
 		this.setLocationRelativeTo(parent);
 	}
 }
+
+
+
+class JTextFieldLimit extends PlainDocument {
+	private int limit;
+
+	JTextFieldLimit(int limit) {
+		super();
+		this.limit = limit;
+	}
+
+	public void insertString(int offset, String str, AttributeSet attr) throws BadLocationException {
+		if (str == null) {
+			return;
+		}
+
+		if ((getLength() + str.length()) <= limit) {
+			super.insertString(offset, str, attr);
+		}
+	}
+
+	public void replace(int offset, int length, String text, AttributeSet attrs) throws BadLocationException {
+		if (text != null) {
+		}
+		super.replace(offset, length, text, attrs);
+	}
+
+}
+
+class AuthTableModel extends DefaultTableModel{
+	
+	private JTable table;
+
+    public AuthTableModel(JTable table, Object[][] data, Object[] columnNames) {
+        super(data, columnNames);
+    }
+
+    @Override
+    public void setValueAt(Object aValue, int row, int column) {
+        super.setValueAt(aValue, row, column);
+        // Check if the row is selected
+        try{
+        	 table.getSelectedRow();
+        } catch (Exception e) {
+			// TODO: handle exception 
+        	return;
+		}
+        if (row == table.getSelectedRow()) {
+            // Set icon for the selected row
+            // Here you would load the icon from a file or resource
+            // For demonstration, I'm using an empty ImageIcon
+            ImageIcon icon = new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/checkbox16.png"));
+            // Set icon for the selected row
+            // Assuming the icon is set in the first column
+            super.setValueAt(icon, row, 0);
+        }
+    }
+
+}
+
+
+
+

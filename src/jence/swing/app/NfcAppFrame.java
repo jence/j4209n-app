@@ -85,6 +85,7 @@ public class NfcAppFrame extends JFrame {
 	private JLabel status_;
 
 	private JDialog authDialog;
+	private JDialog NDEFDialog;
 
 	private J4209N.KeyData keydata_ = new J4209N.KeyData(0); // full access
 
@@ -127,6 +128,17 @@ public class NfcAppFrame extends JFrame {
 		for (T component : components) {
 			component.setEnabled(enabled);
 		}
+	}
+	
+	
+	
+	private void openNdefWriteDialog(){
+		
+		NDEFDialog = new NDEFDialog(NfcAppFrame.this);
+		
+		NDEFDialog.setVisible(true);
+		NDEFDialog.setSize(200, 400);
+		
 	}
 
 	private void dump() {
@@ -766,6 +778,11 @@ public class NfcAppFrame extends JFrame {
 		panel_5.add(btnNewButton_3);
 
 		JButton btnNewButton_4 = new JButton("Write");
+		btnNewButton_4.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				openNdefWriteDialog();
+			}
+		});
 		btnNewButton_4.setMargin(new Insets(2, 8, 2, 8));
 		btnNewButton_4.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/write.png")));
 		panel_5.add(btnNewButton_4);

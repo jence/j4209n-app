@@ -29,15 +29,11 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
-import org.eclipse.wb.swt.SWTResourceManager;
 
 import jence.jni.J4209N;
-import jence.swt.app.NfcApp;
-import jence.swt.app.NfcAppComposite;
+import jence.jni.Vcard;
+import jence.swing.app.NfcApp.MessageType;
 
 import javax.swing.JSpinner;
 import javax.swing.JCheckBox;
@@ -78,7 +74,7 @@ public class NfcAppFrame extends JFrame {
 	private JTextField textNDEF_;
 	private JTextField textBlocks_;
 	private JTextField textBlockSize_;
-	private JTable table_1;
+	private JTable ndeftable_;
 	private JTextField textField;
 	private JTextField textField_1;
 
@@ -93,6 +89,72 @@ public class NfcAppFrame extends JFrame {
 		status_.setText(text);
 	}
 
+	private boolean ndefFormat() {
+		try {
+			if (!NfcApp.prompt(this, "All data in the current card will be erased. Are you sure?", "Confirmation",
+					NfcApp.MessageType.CONFIRMATION)) {
+				return false;
+			}
+			NfcApp.driver_.ndefFormat();
+//			ndeftable_.removeAll();
+			return true;
+		} catch (Exception e) {
+			NfcApp.prompt(this, e.getMessage(), "Error", NfcApp.MessageType.ERROR);
+		}
+		return false;
+	}
+
+	private boolean ndefErase() {
+		try {
+			if (!NfcApp.driver_.isNDEF()) {
+				NfcApp.prompt(this, "The tag is not NDEF formatted.", "Warning", MessageType.WARNING);
+				return false;
+			}
+			if (NfcApp.prompt(this, "This operation erase all NDEF records. Do you want to proceed?", "Confirmation",
+					MessageType.CONFIRMATION)) {
+				return false;
+			}
+			NfcApp.driver_.ndefErase();
+		} catch (Exception e) {
+			NfcApp.prompt(this, e.getMessage(), "Error", MessageType.ERROR);
+		}
+		return false;
+	}
+
+//	private boolean readNDEF() {
+//		try {
+//			ndeftable_.removeAll();
+//			NfcApp.driver_.sync();
+//			if (!NfcApp.driver_.isNDEF()) {
+//				NfcApp.prompt(this, "No NDEF record found or the card may not be NDEF formatted.", "Warning", MessageType.WARNING);
+//				return false;
+//			}
+//			int records = NfcApp.driver_.ndefRead();
+//			if (records > 0) {
+//				ndeftable_.removeAll();
+//				for (int i = 0; i < records; i++) {
+//					J4209N.NdefRecord ndef = NfcApp.driver_.ndefGetRecord(i);
+//					TableItem item = new TableItem(ndeftable_,SWT.FULL_SELECTION | SWT.OK);
+//					item.setText(0, "" + i);
+//					item.setText(1, ndef.id);
+//					item.setText(2, ndef.type);
+//					item.setText(3, ndef.encoding);
+//					item.setText(4, new String(ndef.payload, "UTF-8"));
+//				}
+//				return true;
+//			} else {
+//				prompt("No NDEF records found.", SWT.OK);
+//				return false;
+//			}
+//		} catch (Exception e) {
+//			prompt(e.getMessage()
+//					+ " Please check if the device is attached to an USB port.",
+//					SWT.ICON_WARNING);
+//		}
+//		return false;
+//	}
+
+	
 	private boolean portlist() {
 		try {
 			String[] ports = NfcApp.driver_.listPorts();
@@ -129,16 +191,14 @@ public class NfcAppFrame extends JFrame {
 			component.setEnabled(enabled);
 		}
 	}
-	
-	
-	
-	private void openNdefWriteDialog(){
-		
+
+	private void openNdefWriteDialog() {
+
 		NDEFDialog = new NDEFDialog(NfcAppFrame.this);
-		
+
 		NDEFDialog.setVisible(true);
 		NDEFDialog.setSize(200, 400);
-		
+
 	}
 
 	private void dump() {
@@ -226,8 +286,7 @@ public class NfcAppFrame extends JFrame {
 			int blockCount = NfcApp.driver_.blockcount();
 			ArrayList<String> rowData = new ArrayList<String>();
 			int rowNum = 0;
-			
-			
+
 			for (int i = 0; i < blockCount; i++) {
 				rowData.add(String.valueOf(rowNum++));
 //				rowData.add("test");
@@ -653,7 +712,7 @@ public class NfcAppFrame extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				authDialog = new AuthFrame(NfcAppFrame.this);
 				authDialog.setVisible(true);
-				
+
 //				for (int i = 0; i < table_1.getItemCount(); i++) {
 //					table_1.getItem(i).setImage((Image) null);
 //				}
@@ -767,40 +826,54 @@ public class NfcAppFrame extends JFrame {
 		panel_5.setBorder(new TitledBorder(null, "NDEF", TitledBorder.LEADING, TitledBorder.TOP, null, null));
 		panel_4.add(panel_5);
 
-		JButton btnNewButton_2 = new JButton("Format");
-		btnNewButton_2.setMargin(new Insets(2, 8, 2, 8));
-		btnNewButton_2.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/format.png")));
-		panel_5.add(btnNewButton_2);
+		JButton btnFormat = new JButton("Format");
+		btnFormat.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				NfcApp.prompt(NfcAppFrame.this,"For format operation to work successfully, first scan the card, then hit this button.", "Information", NfcApp.MessageType.INFORMATION);
+				if (ndefFormat()) {
+					NfcApp.prompt(NfcAppFrame.this,"Format complete", "Information", NfcApp.MessageType.INFORMATION);
+				}
 
-		JButton btnNewButton_3 = new JButton("Clean");
-		btnNewButton_3.setMargin(new Insets(2, 8, 2, 8));
-		btnNewButton_3.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/clean.png")));
-		panel_5.add(btnNewButton_3);
+			}
+		});
+		btnFormat.setMargin(new Insets(2, 8, 2, 8));
+		btnFormat.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/format.png")));
+		panel_5.add(btnFormat);
 
-		JButton btnNewButton_4 = new JButton("Write");
-		btnNewButton_4.addActionListener(new ActionListener() {
+		JButton btnClean = new JButton("Clean");
+		btnClean.setMargin(new Insets(2, 8, 2, 8));
+		btnClean.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/clean.png")));
+		panel_5.add(btnClean);
+
+		JButton btnWrite = new JButton("Write");
+		btnWrite.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				openNdefWriteDialog();
 			}
 		});
-		btnNewButton_4.setMargin(new Insets(2, 8, 2, 8));
-		btnNewButton_4.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/write.png")));
-		panel_5.add(btnNewButton_4);
+		btnWrite.setMargin(new Insets(2, 8, 2, 8));
+		btnWrite.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/write.png")));
+		panel_5.add(btnWrite);
 
-		JButton btnNewButton_5 = new JButton("Read");
-		btnNewButton_5.setMargin(new Insets(2, 8, 2, 8));
-		btnNewButton_5.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/read.png")));
-		panel_5.add(btnNewButton_5);
+		JButton btnRead = new JButton("Read");
+		btnRead.setMargin(new Insets(2, 8, 2, 8));
+		btnRead.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/read.png")));
+		panel_5.add(btnRead);
 
-		JButton btnNewButton_6 = new JButton("Save");
-		btnNewButton_6.setMargin(new Insets(2, 8, 2, 8));
-		btnNewButton_6.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/save.png")));
-		panel_5.add(btnNewButton_6);
+		JButton btnSave = new JButton("Save");
+		btnSave.setMargin(new Insets(2, 8, 2, 8));
+		btnSave.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/save.png")));
+		panel_5.add(btnSave);
 
-		JButton btnNewButton_7 = new JButton("Erase");
-		btnNewButton_7.setMargin(new Insets(2, 8, 2, 8));
-		btnNewButton_7.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/erase.png")));
-		panel_5.add(btnNewButton_7);
+		JButton btnErase = new JButton("Erase");
+		btnErase.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				ndefErase();
+			}
+		});
+		btnErase.setMargin(new Insets(2, 8, 2, 8));
+		btnErase.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/erase.png")));
+		panel_5.add(btnErase);
 
 		JScrollPane scrollPane_1 = new JScrollPane();
 		GridBagConstraints gbc_scrollPane_1 = new GridBagConstraints();
@@ -809,8 +882,15 @@ public class NfcAppFrame extends JFrame {
 		gbc_scrollPane_1.gridy = 1;
 		panel_1.add(scrollPane_1, gbc_scrollPane_1);
 
-		table_1 = new JTable();
-		scrollPane_1.setViewportView(table_1);
+		ndeftable_ = new JTable();
+		ndeftable_.setModel(new DefaultTableModel(
+			new Object[][] {
+			},
+			new String[] {
+				"Index", "New column", "New column", "New column", "New column"
+			}
+		));
+		scrollPane_1.setViewportView(ndeftable_);
 
 		JPanel panel_2 = new JPanel();
 		panel_2.setBorder(new EmptyBorder(8, 8, 0, 8));
@@ -952,25 +1032,24 @@ public class NfcAppFrame extends JFrame {
 
 }
 
-
 class CustomRenderer extends DefaultTableCellRenderer {
-    @Override
-    public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-        Component cell = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+	@Override
+	public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
+			int row, int column) {
+		Component cell = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
 
-        // Check if the row number is divisible by 3
-        if ((row ) % 3 == 0 && row !=0 ) {
-            cell.setBackground(Color.YELLOW); // Change background color for rows divisible by 3
-        }else if(row ==0){
-        	cell.setBackground(Color.LIGHT_GRAY); // Change background color for rows divisible by 3
+		// Check if the row number is divisible by 3
+		if ((row) % 3 == 0 && row != 0) {
+			cell.setBackground(Color.YELLOW); // Change background color for rows divisible by 3
+		} else if (row == 0) {
+			cell.setBackground(Color.LIGHT_GRAY); // Change background color for rows divisible by 3
 
-        }
-        
-        else {
-            cell.setBackground(Color.WHITE); // Reset background color for other rows
-        }
+		}
 
-        return cell;
-    }
+		else {
+			cell.setBackground(Color.WHITE); // Reset background color for other rows
+		}
+
+		return cell;
+	}
 }
-

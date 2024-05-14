@@ -5,16 +5,25 @@ import java.awt.GridBagLayout;
 import javax.swing.JPanel;
 import java.awt.GridBagConstraints;
 import java.awt.Insets;
+import java.awt.Toolkit;
+
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
+import javax.swing.JFileChooser;
 import javax.swing.JButton;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.MatteBorder;
+import javax.print.attribute.AttributeSet;
+import javax.swing.AbstractCellEditor;
+import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.JSlider;
 import javax.swing.JTabbedPane;
@@ -22,28 +31,47 @@ import javax.swing.JTabbedPane;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Font;
+
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.border.TitledBorder;
+import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.widgets.TableItem;
+import javax.swing.table.TableCellEditor;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DocumentFilter;
+import javax.swing.text.DocumentFilter.FilterBypass;
 
 import jence.jni.J4209N;
 import jence.jni.Vcard;
 import jence.swing.app.NfcApp.MessageType;
+import jence.swt.app.Callback;
 
 import javax.swing.JSpinner;
 import javax.swing.JCheckBox;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.lang.ref.Cleaner.Cleanable;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.regex.Pattern;
 import java.awt.event.ActionEvent;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SpinnerNumberModel;
 
 public class NfcAppFrame extends JFrame {
 
@@ -61,13 +89,16 @@ public class NfcAppFrame extends JFrame {
 	private JTabbedPane tabFolder;
 	private JTable table_;
 	private DefaultTableModel NDEFModel = new DefaultTableModel();
+	private DefaultTableModel NDEFFormattedModel = new DefaultTableModel();
+
 	private LinkedList<String> NDEFcolumnNames = new LinkedList<String>();
 	private ArrayList<Integer> NDEFcolumnWidth = new ArrayList<Integer>();
+	public static ArrayList<Tuple<Integer, Integer>> editedValue = new ArrayList<>();
 
 	private ArrayList<ArrayList<String>> NDEFData = new ArrayList<ArrayList<String>>();
 
 	private JButton btnAuth_;
-
+	private JCheckBox btnWritable_;
 	private JTextField uid_;
 	private JTextField textAuth_;
 	private JTextField name_;
@@ -75,18 +106,86 @@ public class NfcAppFrame extends JFrame {
 	private JTextField textBlocks_;
 	private JTextField textBlockSize_;
 	private JTable ndeftable_;
-	private JTextField textField;
-	private JTextField textField_1;
+	private JTextField emulationUid_;
+	public JTextField elapsed_;
+	private JSpinner timeout_;
+	public boolean emulate_ = false;
 
-	private JLabel status_;
+	private static JLabel status_;
 
 	private JDialog authDialog;
 	private JDialog NDEFDialog;
 
 	private J4209N.KeyData keydata_ = new J4209N.KeyData(0); // full access
+	private Timer timer_ = null;
 
-	private void status(String text) {
+	public static void status(String text) {
 		status_.setText(text);
+	}
+
+	private void initEmulation() {
+		String uid = emulationUid_.getText();
+		uid = "000000" + uid;
+		uid = uid.substring(uid.length() - 6);
+		emulationUid_.setText(uid);
+		BigInteger bi = new BigInteger(uid, 16);
+		int uidlen = bi.toByteArray().length;
+		if (uidlen != 3) {
+			NfcApp.prompt(NfcAppFrame.this,
+					"Change the UID value so that the first byte is non zero. The total UID size must be 3 bytes.",
+					"Warning", MessageType.WARNING);
+			return;
+		}
+		try {
+			NfcApp.driver_.emulateInit(bi.toByteArray(), btnWritable_.isSelected());
+		} catch (Exception e) {
+			NfcApp.prompt(NfcAppFrame.this, e.getLocalizedMessage(), "Error", MessageType.ERROR);
+		}
+	}
+
+	private void stopEmulation() {
+		try {
+			NfcApp.driver_.emulateStop();
+			timer_ = null;
+			emulate_ = false;
+		} catch (Exception e) {
+			NfcApp.prompt(NfcAppFrame.this, e.getLocalizedMessage(), "Error", MessageType.ERROR);
+		}
+	}
+
+	private void emulationResponse(int index, String msg) {
+		if (index == 1) {
+			NfcApp.prompt(NfcAppFrame.this, "Received NDEF write in Card Emulation.", "Response",
+					MessageType.INFORMATION);
+		}
+		timer_.cancel();
+		timer_ = null;
+//		emulate_ = false; // TODO: should be enabled
+	}
+
+	private void startEmulation() {
+		try {
+
+			timer_ = new Timer();
+			final int seconds[] = { 0 };
+			emulate_ = true;
+			EmulationWorker worker = new EmulationWorker(this);
+			worker.execute();
+
+			int timeouts = Integer.parseInt(timeout_.getValue().toString());
+
+			NfcApp.driver_.emulateStart(timeouts * 1000, new Callback() {
+
+				@Override
+				public void callback(int option, int index, String text) throws Exception {
+					emulationResponse(index, text);
+				}
+			});
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			NfcApp.prompt(NfcAppFrame.this, e.getLocalizedMessage(), "Error", MessageType.ERROR);
+		}
 	}
 
 	private boolean ndefFormat() {
@@ -96,10 +195,10 @@ public class NfcAppFrame extends JFrame {
 				return false;
 			}
 			NfcApp.driver_.ndefFormat();
-//			ndeftable_.removeAll();
+			NDEFFormattedModel.setRowCount(0);
 			return true;
 		} catch (Exception e) {
-			NfcApp.prompt(this, e.getMessage(), "Error", NfcApp.MessageType.ERROR);
+			NfcApp.prompt(this, e.getMessage(), "Error", MessageType.ERROR);
 		}
 		return false;
 	}
@@ -110,7 +209,7 @@ public class NfcAppFrame extends JFrame {
 				NfcApp.prompt(this, "The tag is not NDEF formatted.", "Warning", MessageType.WARNING);
 				return false;
 			}
-			if (NfcApp.prompt(this, "This operation erase all NDEF records. Do you want to proceed?", "Confirmation",
+			if (!NfcApp.prompt(this, "This operation erase all NDEF records. Do you want to proceed?", "Confirmation",
 					MessageType.CONFIRMATION)) {
 				return false;
 			}
@@ -121,44 +220,66 @@ public class NfcAppFrame extends JFrame {
 		return false;
 	}
 
-//	private boolean readNDEF() {
-//		try {
-//			ndeftable_.removeAll();
-//			NfcApp.driver_.sync();
-//			if (!NfcApp.driver_.isNDEF()) {
-//				NfcApp.prompt(this, "No NDEF record found or the card may not be NDEF formatted.", "Warning", MessageType.WARNING);
-//				return false;
-//			}
-//			int records = NfcApp.driver_.ndefRead();
-//			if (records > 0) {
-//				ndeftable_.removeAll();
-//				for (int i = 0; i < records; i++) {
-//					J4209N.NdefRecord ndef = NfcApp.driver_.ndefGetRecord(i);
-//					TableItem item = new TableItem(ndeftable_,SWT.FULL_SELECTION | SWT.OK);
-//					item.setText(0, "" + i);
-//					item.setText(1, ndef.id);
-//					item.setText(2, ndef.type);
-//					item.setText(3, ndef.encoding);
-//					item.setText(4, new String(ndef.payload, "UTF-8"));
-//				}
-//				return true;
-//			} else {
-//				prompt("No NDEF records found.", SWT.OK);
-//				return false;
-//			}
-//		} catch (Exception e) {
-//			prompt(e.getMessage()
-//					+ " Please check if the device is attached to an USB port.",
-//					SWT.ICON_WARNING);
-//		}
-//		return false;
-//	}
+	private boolean clean() {
+		try {
+			if (!NfcApp.prompt(NfcAppFrame.this,
+					"This operation will reset all the data in the card. Do you want to proceed?", "Confirmation",
+					MessageType.CONFIRMATION)) {
+				return false;
+			}
+			NfcApp.driver_.format();
+			ndeftable_.removeAll();
+			NfcApp.prompt(NfcAppFrame.this,
+					"Clean operation completed. Verify by rescanning the card/tag.? Most of the memory content will be zero. "
+							+ "If some portion of the memory is not set to zero, try again.",
+					"Information", MessageType.INFORMATION);
+			status("Memory Cleaned");
+		} catch (Exception e) {
+			NfcApp.prompt(NfcAppFrame.this, e.getLocalizedMessage(), "Error", MessageType.ERROR);
+		}
+		return false;
+	}
 
-	
+	private boolean readNDEF() {
+		try {
+			NDEFFormattedModel.setRowCount(0);
+			ndeftable_.removeAll();
+			NfcApp.driver_.sync();
+			if (!NfcApp.driver_.isNDEF()) {
+				NfcApp.prompt(this, "No NDEF record found or the card may not be NDEF formatted.", "Warning",
+						MessageType.WARNING);
+				return false;
+			}
+			int records = NfcApp.driver_.ndefRead();
+			if (records > 0) {
+				ndeftable_.removeAll();
+				NDEFFormattedModel.setRowCount(0);
+				for (int i = 0; i < records; i++) {
+					J4209N.NdefRecord ndef = NfcApp.driver_.ndefGetRecord(i);
+					String[] rowValue = { String.valueOf(i), ndef.id, ndef.type, ndef.encoding,
+							new String(ndef.payload, "UTF-8") };
+					NDEFFormattedModel.addRow(rowValue);
+				}
+				return true;
+			} else {
+//				prompt("No NDEF records found.", SWT.OK);
+				NfcApp.prompt(NfcAppFrame.this, "No NDEF records found", "Warning", MessageType.WARNING);
+				return false;
+			}
+		} catch (Exception e) {
+			NfcApp.prompt(NfcAppFrame.this,
+					e.getLocalizedMessage() + " Please check if the device is attached to an USB port.", "Error",
+					MessageType.ERROR);
+
+		}
+		return false;
+	}
+
 	private boolean portlist() {
 		try {
 			String[] ports = NfcApp.driver_.listPorts();
 			comboPorts_.removeAllItems();
+			status(ports.length + " Ports Found. " + " Complete Listing Available Ports.");
 			for (int i = 0; i < ports.length; i++) {
 				comboPorts_.addItem(ports[i]);
 			}
@@ -169,9 +290,9 @@ public class NfcAppFrame extends JFrame {
 			}
 			return true;
 		} catch (Exception e) {
-//			prompt(e.getMessage()
-//					+ " Please check if the device is attached to an USB port.",
-//					SWT.ICON_WARNING);
+			NfcApp.prompt(NfcAppFrame.this, e.getMessage() + " Please check if the device is attached to an USB port.",
+					"Warning", MessageType.WARNING);
+
 		}
 		return false;
 	}
@@ -181,7 +302,7 @@ public class NfcAppFrame extends JFrame {
 			NfcApp.driver_.close();
 			return true;
 		} catch (Exception e) {
-//			prompt(e.getMessage(), SWT.ICON_WARNING);
+			NfcApp.prompt(NfcAppFrame.this, e.getLocalizedMessage(), "Error", MessageType.ERROR);
 		}
 		return false;
 	}
@@ -199,6 +320,45 @@ public class NfcAppFrame extends JFrame {
 		NDEFDialog.setVisible(true);
 		NDEFDialog.setSize(200, 400);
 
+	}
+
+	public void saveToFile() {
+		JFileChooser fileChooser = new JFileChooser();
+		fileChooser.setDialogTitle("Save");
+		fileChooser.setFileFilter(new FileNameExtensionFilter("NDEF Files", "ndef"));
+		fileChooser.setAcceptAllFileFilterUsed(false);
+
+		int returnValue = fileChooser.showSaveDialog(null);
+		if (returnValue == JFileChooser.APPROVE_OPTION) {
+			File selectedFile = fileChooser.getSelectedFile();
+			File file = selectedFile.getName().endsWith(".ndef") ? selectedFile
+					: new File(selectedFile.getAbsolutePath() + ".ndef");
+			if (file.exists()) {
+				int choice = JOptionPane.showConfirmDialog(null, "File already exists. Do you want to overwrite it?",
+						"Confirmation", JOptionPane.YES_NO_OPTION);
+				if (choice != JOptionPane.YES_OPTION) {
+					return; // User chose not to overwrite, so return
+				}
+			}
+			DefaultTableModel model = (DefaultTableModel) table_.getModel();
+			try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+				for (int i = 0; i < model.getRowCount(); i++) {
+					for (int j = 2; j < model.getColumnCount(); j++) {
+						Object value = model.getValueAt(i, j);
+						if (value != null) {
+							writer.write(value.toString());
+							writer.write(' ');
+							System.out.print(value + " ");
+						}
+					}
+					System.out.println();
+					writer.newLine();
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+				NfcApp.prompt(NfcAppFrame.this, e.getLocalizedMessage(), "Error", MessageType.ERROR);
+			}
+		}
 	}
 
 	private void dump() {
@@ -236,7 +396,7 @@ public class NfcAppFrame extends JFrame {
 			case NTAG215:
 			case NTAG216:
 			case NTAG424:
-				NDEFcolumnNames.add(0, "Page");
+//				NDEFcolumnNames.add(0, "Page");
 			default:
 				NDEFcolumnNames.add(0, "Block");
 			}
@@ -251,7 +411,28 @@ public class NfcAppFrame extends JFrame {
 				NDEFcolumnWidth.add(50);
 			}
 
-			DefaultTableModel model = new DefaultTableModel();
+			DefaultTableModel model = new DefaultTableModel() {
+				@Override
+				public boolean isCellEditable(int row, int column) {
+					// Make the first and third columns non-editable
+					return column != 0 && column != 1 && row != 0 && ((row + 1) % 4) != 0;
+				}
+
+			};
+			model.addTableModelListener(new TableModelListener() {
+				@Override
+				public void tableChanged(TableModelEvent e) {
+					int row = e.getFirstRow();
+					int column = e.getColumn();
+					if (row >= 0 && column >= 0) {
+						Object oldValue = model.getValueAt(row, column);
+						Object newValue = model.getValueAt(row, column);
+						System.out.println("Cell changed at row " + row + ", column " + column + ". Old value: "
+								+ oldValue + ", New value: " + newValue);
+					}
+				}
+			});
+
 			for (String name : NDEFcolumnNames) {
 				model.addColumn(name);
 //	            System.out.println(name);
@@ -281,11 +462,24 @@ public class NfcAppFrame extends JFrame {
 				textNDEF_.setText("STANDARD");
 				textAuth_.setText("DEFAULT");
 			}
-//
-//			// we will try to read the entire card regardless
+
+// we will try to read the entire card regardless
 			int blockCount = NfcApp.driver_.blockcount();
 			ArrayList<String> rowData = new ArrayList<String>();
 			int rowNum = 0;
+
+// setting cell renderer for different tag
+			switch (NfcApp.driver_.type()) {
+			case MIFARE_CLASSIC_1K:
+//				break;
+			case MIFARE_CLASSIC_4K:
+				table_.setDefaultRenderer(Object.class, new CustomRenderer());
+				break;
+			default:
+				DefaultTableCellRenderer renderer = new DefaultTableCellRenderer();
+				table_.setDefaultRenderer(Object.class, renderer);
+				break;
+			}
 
 			for (int i = 0; i < blockCount; i++) {
 				rowData.add(String.valueOf(rowNum++));
@@ -302,31 +496,17 @@ public class NfcAppFrame extends JFrame {
 					case MIFARE_CLASSIC_1K:
 //						break;
 					case MIFARE_CLASSIC_4K:
-						table_.setDefaultRenderer(Object.class, new CustomRenderer());
 						if (i % 4 == 3) {
-//						item.setBackground(Display.getDefault()
-////								.getSystemColor(SWT.COLOR_YELLOW));
-//						item.setText(1, "Auth Keys");
 							rowData.add("Auth Keys");
 						} else {
-//							item.setText(1, "Data");
 							rowData.add("Data");
 						}
+						break;
 					default:
+						rowData.add("-");
 						break;
 					}
 				}
-//			if (data != null) {
-//				// System.out.println("Block:"+i+"\t"+NfcApp.driver_.toHex(data));
-//				for (int j = 0; j < NfcApp.driver_.blocksize(); j++) {
-//					String v = String.format("%02X", data[j]);
-//					item.setText(j + 2, v);
-//				}
-//			} else {
-//				for (int j = 0; j < NfcApp.driver_.blockcount(); j++) {
-//					item.setText(j + 2, "-");
-//				}
-//			}
 
 				if (ndef)
 					data = NfcApp.driver_.ndefRead(i);
@@ -343,7 +523,7 @@ public class NfcAppFrame extends JFrame {
 					}
 				} else {
 					for (int j = 0; j < NfcApp.driver_.blockcount(); j++) {
-//						item.setText(j + 2, "-");
+						rowData.add("-");
 					}
 				}
 //				rowData.add(String.valueOf(rowNum)); // ROW NUMBER
@@ -360,27 +540,49 @@ public class NfcAppFrame extends JFrame {
 				NDEFData.add(null);
 			}
 			table_.setModel(model);
-//			// table_.pack();
-//			// this.getShell().pack();
-//			switch (NfcApp.driver_.type()) {
-//			case MIFARE_CLASSIC_1K:
-//			case MIFARE_CLASSIC_4K:
-//				createEditableTable(table_);
-//				break;
-//			case ULTRALIGHT:
-//			case ULTRALIGHT_EV1:
-//			case ULTRALIGHT_C:
-//			case NTAG203:
-//			case NTAG213:
-//			case NTAG215:
-//			case NTAG216:
-//				createEditableTable(table_);
-//				break;
-//			default:
-//				if (listener_ != null)
-//					table_.removeListener(SWT.MouseDown, listener_);
-//				break;
-//			}
+			switch (NfcApp.driver_.type()) {
+			case MIFARE_CLASSIC_1K:
+			case MIFARE_CLASSIC_4K:
+//				createEditableTable(true);
+				table_.setEnabled(true);
+				for (int columnIndex = 0; columnIndex < table_.getColumnCount(); columnIndex++) {
+					// Set the LimitedCharacterCellEditor for each column
+					table_.getColumnModel().getColumn(columnIndex)
+							.setCellEditor(new LimitedCharacterCellEditor(2, "0123456789ABCDEFabcdef"));
+				}
+
+				break;
+			case ULTRALIGHT:
+				table_.setEnabled(false);
+				break;
+			case ULTRALIGHT_EV1:
+				table_.setEnabled(false);
+				break;
+			case ULTRALIGHT_C:
+				table_.setEnabled(false);
+				break;
+			case NTAG203:
+				table_.setEnabled(false);
+				break;
+			case NTAG213:
+				table_.setEnabled(false);
+				break;
+			case NTAG215:
+				table_.setEnabled(false);
+				break;
+			case NTAG216:
+				table_.setEnabled(true);
+				for (int columnIndex = 0; columnIndex < table_.getColumnCount(); columnIndex++) {
+					// Set the LimitedCharacterCellEditor for each column
+					table_.getColumnModel().getColumn(columnIndex)
+							.setCellEditor(new LimitedCharacterCellEditor(4, "0123456789ABCDEFabcdef"));
+				}
+
+				break;
+			default:
+				table_.setEnabled(false);
+				break;
+			}
 		} catch (Exception e) {
 //			prompt(e.getMessage(), SWT.ICON_WARNING);
 			e.printStackTrace();
@@ -415,7 +617,7 @@ public class NfcAppFrame extends JFrame {
 			}
 			return true;
 		} catch (Exception e) {
-//			prompt(e.getMessage(), SWT.ICON_WARNING | SWT.OK);
+			NfcApp.prompt(NfcAppFrame.this, e.getMessage(), "Error", MessageType.ERROR);
 		}
 		return false;
 	}
@@ -425,14 +627,16 @@ public class NfcAppFrame extends JFrame {
 			NfcApp.driver_.open(comboPorts_.getSelectedItem().toString());
 			return true;
 		} catch (Exception e) {
-//			prompt(e.getMessage()
-//					+ " Could not connect to this port. Try another port.",
-//					SWT.ICON_WARNING);
+			NfcApp.prompt(NfcAppFrame.this, e.getMessage() + " Could not connect to this port. Try another port.",
+					"Warning", MessageType.WARNING);
 		}
 		return false;
 	}
 
 	public NfcAppFrame() {
+
+		editedValue.add(new Tuple(3, 3));
+
 		// TODO Auto-generated constructor stub
 		GridBagLayout gridBagLayout = new GridBagLayout();
 		gridBagLayout.columnWidths = new int[] { 63, 0 };
@@ -479,7 +683,6 @@ public class NfcAppFrame extends JFrame {
 
 				if (portlist()) {
 					btnConnect.setEnabled(true);
-					status("Completed listing available ports.");
 				}
 			}
 		});
@@ -498,6 +701,8 @@ public class NfcAppFrame extends JFrame {
 					setEnabled(true, btnDisconnect, btnScan);
 					setEnabled(false, btnRefresh, btnConnect);
 					status("Connection was successful.");
+				} else {
+					status("Could not connect to the port, Try again.");
 				}
 
 			}
@@ -829,9 +1034,11 @@ public class NfcAppFrame extends JFrame {
 		JButton btnFormat = new JButton("Format");
 		btnFormat.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				NfcApp.prompt(NfcAppFrame.this,"For format operation to work successfully, first scan the card, then hit this button.", "Information", NfcApp.MessageType.INFORMATION);
+				NfcApp.prompt(NfcAppFrame.this,
+						"For format operation to work successfully, first scan the card, then hit this button.",
+						"Information", NfcApp.MessageType.INFORMATION);
 				if (ndefFormat()) {
-					NfcApp.prompt(NfcAppFrame.this,"Format complete", "Information", NfcApp.MessageType.INFORMATION);
+					NfcApp.prompt(NfcAppFrame.this, "Format complete", "Information", NfcApp.MessageType.INFORMATION);
 				}
 
 			}
@@ -841,6 +1048,11 @@ public class NfcAppFrame extends JFrame {
 		panel_5.add(btnFormat);
 
 		JButton btnClean = new JButton("Clean");
+		btnClean.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				clean();
+			}
+		});
 		btnClean.setMargin(new Insets(2, 8, 2, 8));
 		btnClean.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/clean.png")));
 		panel_5.add(btnClean);
@@ -856,11 +1068,23 @@ public class NfcAppFrame extends JFrame {
 		panel_5.add(btnWrite);
 
 		JButton btnRead = new JButton("Read");
+		btnRead.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				readNDEF();
+
+			}
+		});
 		btnRead.setMargin(new Insets(2, 8, 2, 8));
 		btnRead.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/read.png")));
 		panel_5.add(btnRead);
 
 		JButton btnSave = new JButton("Save");
+		btnSave.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+
+				saveToFile();
+			}
+		});
 		btnSave.setMargin(new Insets(2, 8, 2, 8));
 		btnSave.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/save.png")));
 		panel_5.add(btnSave);
@@ -883,13 +1107,13 @@ public class NfcAppFrame extends JFrame {
 		panel_1.add(scrollPane_1, gbc_scrollPane_1);
 
 		ndeftable_ = new JTable();
-		ndeftable_.setModel(new DefaultTableModel(
-			new Object[][] {
-			},
-			new String[] {
-				"Index", "New column", "New column", "New column", "New column"
-			}
-		));
+		String[] NDEFFormattedModelColName = { "Index", "ID", "Type", "Encoding", "Data" };
+		for (String col : NDEFFormattedModelColName) {
+			NDEFFormattedModel.addColumn(col);
+		}
+		ndeftable_.setModel(NDEFFormattedModel);
+		ndeftable_.setEnabled(false);
+		ndeftable_.getTableHeader().setReorderingAllowed(false);
 		scrollPane_1.setViewportView(ndeftable_);
 
 		JPanel panel_2 = new JPanel();
@@ -902,88 +1126,108 @@ public class NfcAppFrame extends JFrame {
 		gbl_panel_2.rowWeights = new double[] { 0.0, 0.0, Double.MIN_VALUE };
 		panel_2.setLayout(gbl_panel_2);
 
-		JLabel lblNewLabel_6 = new JLabel("UID");
-		GridBagConstraints gbc_lblNewLabel_6 = new GridBagConstraints();
-		gbc_lblNewLabel_6.anchor = GridBagConstraints.EAST;
-		gbc_lblNewLabel_6.insets = new Insets(0, 0, 5, 5);
-		gbc_lblNewLabel_6.gridx = 0;
-		gbc_lblNewLabel_6.gridy = 0;
-		panel_2.add(lblNewLabel_6, gbc_lblNewLabel_6);
+		JLabel lblUID = new JLabel("UID");
+		GridBagConstraints gbc_lblUID = new GridBagConstraints();
+		gbc_lblUID.anchor = GridBagConstraints.EAST;
+		gbc_lblUID.insets = new Insets(0, 0, 5, 5);
+		gbc_lblUID.gridx = 0;
+		gbc_lblUID.gridy = 0;
+		panel_2.add(lblUID, gbc_lblUID);
 
-		textField = new JTextField();
-		GridBagConstraints gbc_textField = new GridBagConstraints();
-		gbc_textField.insets = new Insets(0, 0, 5, 5);
-		gbc_textField.fill = GridBagConstraints.HORIZONTAL;
-		gbc_textField.gridx = 1;
-		gbc_textField.gridy = 0;
-		panel_2.add(textField, gbc_textField);
-		textField.setColumns(10);
+		emulationUid_ = new JTextField(6);
+		emulationUid_.setDocument(new JTextFieldLimit(6));
+		emulationUid_.setText("12BA89");
 
-		JLabel lblNewLabel_7 = new JLabel("Timeout (sec)");
-		GridBagConstraints gbc_lblNewLabel_7 = new GridBagConstraints();
-		gbc_lblNewLabel_7.insets = new Insets(0, 0, 5, 5);
-		gbc_lblNewLabel_7.gridx = 2;
-		gbc_lblNewLabel_7.gridy = 0;
-		panel_2.add(lblNewLabel_7, gbc_lblNewLabel_7);
+		GridBagConstraints gbc_emulationUid_ = new GridBagConstraints();
+		gbc_emulationUid_.insets = new Insets(0, 0, 5, 5);
+		gbc_emulationUid_.fill = GridBagConstraints.HORIZONTAL;
+		gbc_emulationUid_.gridx = 1;
+		gbc_emulationUid_.gridy = 0;
+		panel_2.add(emulationUid_, gbc_emulationUid_);
+		emulationUid_.setColumns(10);
 
-		JSpinner spinner = new JSpinner();
-		GridBagConstraints gbc_spinner = new GridBagConstraints();
-		gbc_spinner.insets = new Insets(0, 0, 5, 5);
-		gbc_spinner.gridx = 3;
-		gbc_spinner.gridy = 0;
-		panel_2.add(spinner, gbc_spinner);
+		JLabel lblTimeout = new JLabel("Timeout (sec)");
+		GridBagConstraints gbc_lblTimeout = new GridBagConstraints();
+		gbc_lblTimeout.insets = new Insets(0, 0, 5, 5);
+		gbc_lblTimeout.gridx = 2;
+		gbc_lblTimeout.gridy = 0;
+		panel_2.add(lblTimeout, gbc_lblTimeout);
 
-		JCheckBox chckbxNewCheckBox = new JCheckBox("Writable");
-		GridBagConstraints gbc_chckbxNewCheckBox = new GridBagConstraints();
-		gbc_chckbxNewCheckBox.insets = new Insets(0, 0, 5, 5);
-		gbc_chckbxNewCheckBox.gridx = 4;
-		gbc_chckbxNewCheckBox.gridy = 0;
-		panel_2.add(chckbxNewCheckBox, gbc_chckbxNewCheckBox);
+		timeout_ = new JSpinner();
+		timeout_.setModel(new SpinnerNumberModel(60, 0, 30000, 1));
+		GridBagConstraints gbc_timeout_ = new GridBagConstraints();
+		gbc_timeout_.insets = new Insets(0, 0, 5, 5);
+		gbc_timeout_.gridx = 3;
+		gbc_timeout_.gridy = 0;
+		panel_2.add(timeout_, gbc_timeout_);
 
-		JButton btnNewButton_8 = new JButton("Apply");
-		btnNewButton_8.setMargin(new Insets(2, 8, 2, 8));
-		btnNewButton_8.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/cardwrite.png")));
-		GridBagConstraints gbc_btnNewButton_8 = new GridBagConstraints();
-		gbc_btnNewButton_8.anchor = GridBagConstraints.EAST;
-		gbc_btnNewButton_8.insets = new Insets(0, 0, 5, 5);
-		gbc_btnNewButton_8.gridx = 5;
-		gbc_btnNewButton_8.gridy = 0;
-		panel_2.add(btnNewButton_8, gbc_btnNewButton_8);
+		btnWritable_ = new JCheckBox("Writable");
+		GridBagConstraints gbc_btnWritable_ = new GridBagConstraints();
+		gbc_btnWritable_.insets = new Insets(0, 0, 5, 5);
+		gbc_btnWritable_.gridx = 4;
+		gbc_btnWritable_.gridy = 0;
+		panel_2.add(btnWritable_, gbc_btnWritable_);
 
-		JButton btnNewButton_9 = new JButton("Start");
-		btnNewButton_9.setMargin(new Insets(2, 8, 2, 8));
-		btnNewButton_9.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/emulate.png")));
-		GridBagConstraints gbc_btnNewButton_9 = new GridBagConstraints();
-		gbc_btnNewButton_9.insets = new Insets(0, 0, 5, 5);
-		gbc_btnNewButton_9.gridx = 6;
-		gbc_btnNewButton_9.gridy = 0;
-		panel_2.add(btnNewButton_9, gbc_btnNewButton_9);
+		JButton btnApply_ = new JButton("Apply");
+		btnApply_.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				initEmulation();
+			}
+		});
+		btnApply_.setMargin(new Insets(2, 8, 2, 8));
+		btnApply_.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/cardwrite.png")));
+		GridBagConstraints gbc_btnApply_ = new GridBagConstraints();
+		gbc_btnApply_.anchor = GridBagConstraints.EAST;
+		gbc_btnApply_.insets = new Insets(0, 0, 5, 5);
+		gbc_btnApply_.gridx = 5;
+		gbc_btnApply_.gridy = 0;
+		panel_2.add(btnApply_, gbc_btnApply_);
 
-		JButton btnNewButton_10 = new JButton("Stop");
-		btnNewButton_10.setMargin(new Insets(2, 8, 2, 8));
-		btnNewButton_10.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/stop.png")));
-		GridBagConstraints gbc_btnNewButton_10 = new GridBagConstraints();
-		gbc_btnNewButton_10.insets = new Insets(0, 0, 5, 0);
-		gbc_btnNewButton_10.gridx = 7;
-		gbc_btnNewButton_10.gridy = 0;
-		panel_2.add(btnNewButton_10, gbc_btnNewButton_10);
+		JButton btnStart_ = new JButton("Start");
+		btnStart_.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				startEmulation();
+			}
+		});
+		btnStart_.setMargin(new Insets(2, 8, 2, 8));
+		btnStart_.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/emulate.png")));
+		GridBagConstraints gbc_btnStart_ = new GridBagConstraints();
+		gbc_btnStart_.insets = new Insets(0, 0, 5, 5);
+		gbc_btnStart_.gridx = 6;
+		gbc_btnStart_.gridy = 0;
+		panel_2.add(btnStart_, gbc_btnStart_);
 
-		JLabel lblNewLabel_8 = new JLabel("Time");
-		GridBagConstraints gbc_lblNewLabel_8 = new GridBagConstraints();
-		gbc_lblNewLabel_8.anchor = GridBagConstraints.EAST;
-		gbc_lblNewLabel_8.insets = new Insets(0, 0, 0, 5);
-		gbc_lblNewLabel_8.gridx = 0;
-		gbc_lblNewLabel_8.gridy = 1;
-		panel_2.add(lblNewLabel_8, gbc_lblNewLabel_8);
+		JButton btnStop_ = new JButton("Stop");
+		btnStop_.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				stopEmulation();
+			}
+		});
+		btnStop_.setMargin(new Insets(2, 8, 2, 8));
+		btnStop_.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/stop.png")));
+		GridBagConstraints gbc_btnStop_ = new GridBagConstraints();
+		gbc_btnStop_.insets = new Insets(0, 0, 5, 0);
+		gbc_btnStop_.gridx = 7;
+		gbc_btnStop_.gridy = 0;
+		panel_2.add(btnStop_, gbc_btnStop_);
 
-		textField_1 = new JTextField();
-		GridBagConstraints gbc_textField_1 = new GridBagConstraints();
-		gbc_textField_1.insets = new Insets(0, 0, 0, 5);
-		gbc_textField_1.fill = GridBagConstraints.HORIZONTAL;
-		gbc_textField_1.gridx = 1;
-		gbc_textField_1.gridy = 1;
-		panel_2.add(textField_1, gbc_textField_1);
-		textField_1.setColumns(10);
+		JLabel lblTime = new JLabel("Time");
+		GridBagConstraints gbc_lblTime = new GridBagConstraints();
+		gbc_lblTime.anchor = GridBagConstraints.EAST;
+		gbc_lblTime.insets = new Insets(0, 0, 0, 5);
+		gbc_lblTime.gridx = 0;
+		gbc_lblTime.gridy = 1;
+		panel_2.add(lblTime, gbc_lblTime);
+
+		elapsed_ = new JTextField();
+		elapsed_.setText("0");
+		GridBagConstraints gbc_elapsed_ = new GridBagConstraints();
+		gbc_elapsed_.insets = new Insets(0, 0, 0, 5);
+		gbc_elapsed_.fill = GridBagConstraints.HORIZONTAL;
+		gbc_elapsed_.gridx = 1;
+		gbc_elapsed_.gridy = 1;
+		panel_2.add(elapsed_, gbc_elapsed_);
+		elapsed_.setColumns(10);
 
 		JPanel panelFooter = new JPanel();
 		panelFooter.setBorder(new EmptyBorder(0, 8, 4, 8));
@@ -1037,19 +1281,65 @@ class CustomRenderer extends DefaultTableCellRenderer {
 	public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
 			int row, int column) {
 		Component cell = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+		Font boldFont = new Font(table.getFont().getName(), Font.BOLD, table.getFont().getSize());
 
 		// Check if the row number is divisible by 3
-		if ((row) % 3 == 0 && row != 0) {
+		if ((row + 1) % 4 == 0 && row != 0) {
 			cell.setBackground(Color.YELLOW); // Change background color for rows divisible by 3
 		} else if (row == 0) {
 			cell.setBackground(Color.LIGHT_GRAY); // Change background color for rows divisible by 3
 
-		}
-
-		else {
+		} else {
 			cell.setBackground(Color.WHITE); // Reset background color for other rows
 		}
 
+		for (Tuple<Integer, Integer> tuple : NfcAppFrame.editedValue) {
+			if (tuple.getRow() == row && tuple.getCol() == column) {
+				setFont(boldFont);
+			}
+		}
+
 		return cell;
+	}
+}
+
+class EmulationWorker extends SwingWorker<Void, Void> {
+
+	private NfcAppFrame parent;
+
+	public EmulationWorker(NfcAppFrame parent) {
+		this.parent = parent;
+	}
+
+	@Override
+	protected Void doInBackground() throws Exception {
+		parent.elapsed_.setText("" + 0);
+		final int seconds[] = { 0 };
+		while (parent.emulate_) {
+			parent.elapsed_.setText("" + seconds[0]++);
+			Thread.sleep(1000);
+		}
+		return null;
+
+	}
+
+}
+
+//Custom class representing a tuple of two values
+class Tuple<A, B> {
+	private final A row;
+	private final B col;
+
+	public Tuple(A row, B col) {
+		this.row = row;
+		this.col = col;
+	}
+
+	public A getRow() {
+		return row;
+	}
+
+	public B getCol() {
+		return col;
 	}
 }

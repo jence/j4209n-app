@@ -63,7 +63,7 @@ public class NDEFDialog extends JDialog {
 				try {
 					// formatting the second time should fail
 					NfcApp.driver_.format();
-//					status("FAILED to clean up the card. Please try again.");
+					NfcAppFrame.status("FAILED to clean up the card. Please try again.");
 					return;
 				} catch (Exception e) {
 					NfcApp.driver_.sync();

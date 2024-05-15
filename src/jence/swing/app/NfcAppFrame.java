@@ -5,6 +5,7 @@ import java.awt.GridBagLayout;
 import javax.swing.JPanel;
 import java.awt.GridBagConstraints;
 import java.awt.Insets;
+import java.awt.Panel;
 import java.awt.Toolkit;
 
 import javax.swing.JLabel;
@@ -29,10 +30,15 @@ import javax.swing.UIManager;
 import javax.swing.JSlider;
 import javax.swing.JTabbedPane;
 
+import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -48,9 +54,6 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
 import javax.swing.text.DocumentFilter.FilterBypass;
 import javax.xml.crypto.Data;
-
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.widgets.TableItem;
 
 import jence.jni.J4209N;
 import jence.jni.Vcard;
@@ -78,6 +81,10 @@ import java.util.regex.Pattern;
 import java.awt.event.ActionEvent;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.JLayeredPane;
+import java.awt.GridLayout;
+import javax.swing.JScrollBar;
+import javax.swing.JProgressBar;
 
 public class NfcAppFrame extends JFrame {
 
@@ -91,8 +98,18 @@ public class NfcAppFrame extends JFrame {
 	private JButton btnConnect;
 	private JButton btnDisconnect;
 	private JButton btnScan;
+	private JButton btnRawWrite_;
 
 	private JTabbedPane tabFolder;
+	private JPanel rawPanel_;
+	private JPanel ndefPanel_;
+	private JPanel emulatePanel_;
+	private JLayeredPane tabFolderContainer_;
+	private TransparentPanel loadingPanel_;
+	private JLabel lblLoadingText_;
+	private JProgressBar progressBar_;
+	public static int progressValue_ = 0;
+
 	private JTable table_;
 	private DefaultTableModel NDEFModel = new DefaultTableModel();
 	private DefaultTableModel NDEFFormattedModel = new DefaultTableModel();
@@ -166,12 +183,11 @@ public class NfcAppFrame extends JFrame {
 		}
 		timer_.cancel();
 		timer_ = null;
-//		emulate_ = false; // TODO: should be enabled
+//		emulate_ = false; // TODO: should be enabled but not in swt
 	}
 
 	private void startEmulation() {
 		try {
-
 			timer_ = new Timer();
 			final int seconds[] = { 0 };
 			emulate_ = true;
@@ -276,89 +292,6 @@ public class NfcAppFrame extends JFrame {
 			NfcApp.prompt(NfcAppFrame.this, e.getLocalizedMessage(), "Error", MessageType.ERROR);
 
 		}
-//		byte[] data;
-//		try {
-//			data = new byte[NfcApp.driver_.blocksize()];
-//			int[] range = NfcApp.driver_.usrmem();
-//			for (int i = range[0]; i < range[1]; i++) {
-//				switch (NfcApp.driver_.type()) {
-//				case MIFARE_CLASSIC_1K:
-//				case MIFARE_CLASSIC_4K:
-//					if (i % 4 == 3)
-//						continue; // trailer block is not user memory (MIFARE
-//									// CLASSIC ONLY)
-//					break;
-//				}
-//				TableItem item = table_.getItem(i);
-//				boolean hasData = false;
-//				final int offset = 2;
-//				for (int j = 0; j < data.length; j++) {
-//					int jj = j + offset;
-//					String newData = item.getText(jj);
-//					String oldData = (String) item.getData(jj + "");
-//					if (oldData != null) {
-//						hasData = true;
-//					}
-//					data[j] = (byte) Integer.parseInt(newData, 16);
-//				}
-//				if (hasData) {
-//					byte[] vdata;
-//					switch (NfcApp.driver_.type()) {
-//					case MIFARE_CLASSIC_1K:
-//					case MIFARE_CLASSIC_4K:
-//						// a sync operation is need to start from a known state
-//						NfcApp.driver_.sync();
-//						int startBlock = (i / 4) * 4;
-//						vdata = NfcApp.driver_.read(startBlock, false); // we
-//																		// have
-//																		// to
-//																		// read
-//																		// start
-//																		// block
-//						break;
-//					}
-//					boolean success = NfcApp.driver_.write(i, data, false); // write
-//																			// new
-//																			// data
-//					if (!success) {
-//						throw new Exception("Failed to write into block " + i
-//								+ " using Key A");
-//					}
-//					vdata = NfcApp.driver_.read(i, false); // read same block to
-//															// verify
-//					if (vdata == null) {
-//						throw new Exception("Failed to read block " + i
-//								+ ". Read operation failed.");
-//					}
-//					boolean equal = Arrays.equals(data, vdata);
-//					if (!equal) {
-//						BigInteger a = new BigInteger(data);
-//						BigInteger b = new BigInteger(vdata);
-//						throw new Exception("Failed to write data into block "
-//								+ i + " (Sector = " + (i / 4)
-//								+ ". Attempted to write data " + a.toString(16)
-//								+ " (hex) but instead found " + b.toString(16)
-//								+ " (hex).");
-//					}
-//				}
-//			}
-//			// All writes were successful, so remove all the old data
-//			for (int i = 0; i < table_.getItemCount(); i++) {
-//				TableItem item = table_.getItem(i);
-//				for (int j = 0; j < table_.getColumnCount(); j++) {
-//					String oldData = (String) item.getData(j + "");
-//					if (oldData != null) {
-//						item.setData(j + "", null); // clear stored data
-//						item.setFont(j, null);
-//					}
-//				}
-//			}
-//		} catch (Exception e) {
-//			NfcApp.prompt(this.getShell(), e.getLocalizedMessage(), SWT.OK
-//					| SWT.ICON_WARNING);
-//			return;
-//		}
-
 	}
 
 	private boolean ndefErase() {
@@ -420,7 +353,6 @@ public class NfcAppFrame extends JFrame {
 				}
 				return true;
 			} else {
-//				prompt("No NDEF records found.", SWT.OK);
 				NfcApp.prompt(NfcAppFrame.this, "No NDEF records found", "Warning", MessageType.WARNING);
 				return false;
 			}
@@ -468,6 +400,22 @@ public class NfcAppFrame extends JFrame {
 	public static <T extends JComponent> void setEnabled(boolean enabled, T... components) {
 		for (T component : components) {
 			component.setEnabled(enabled);
+		}
+	}
+
+	private void setComponentsEnabled(boolean isEnabled, Component... components) {
+		for (Component component : components) {
+			setComponentEnabled(component, isEnabled);
+		}
+	}
+
+	private void setComponentEnabled(Component component, boolean isEnabled) {
+		component.setEnabled(isEnabled);
+		if (component instanceof Container) {
+			Component[] childComponents = ((Container) component).getComponents();
+			for (Component childComponent : childComponents) {
+				setComponentEnabled(childComponent, isEnabled);
+			}
 		}
 	}
 
@@ -562,19 +510,37 @@ public class NfcAppFrame extends JFrame {
 
 			int blockSize = NfcApp.driver_.blocksize();
 			for (int i = 0; i < blockSize; i++) {
-//				TableColumn tableColumn = new TableColumn(table_, SWT.NONE);
-//				tableColumn.setWidth(50);
-//				tableColumn.setAlignment(SWT.CENTER);
-//				tableColumn.setText("" + i);
 				NDEFcolumnNames.add("" + i);
 				NDEFcolumnWidth.add(50);
+				NfcAppFrame.progressValue_ = (i + 3 / blockSize) * 100;
 			}
 
 			DefaultTableModel model = new DefaultTableModel() {
 				@Override
 				public boolean isCellEditable(int row, int column) {
-					// Make the first and third columns non-editable
-					return column != 0 && column != 1 && row != 0 && ((row + 1) % 4) != 0;
+
+					boolean writable = false;
+					try {
+						switch (NfcApp.driver_.type()) {
+						case MIFARE_CLASSIC_1K:
+						case MIFARE_CLASSIC_4K:
+							writable = true;
+							break;
+						default:
+							writable = false;
+							break;
+						}
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					if (writable) {
+						// 0th col, 0th row, 1st row, sector trailer
+						return column != 0 && column != 1 && row != 0 && ((row + 1) % 4) != 0;
+
+					} else {
+						return false;
+					}
 				}
 
 			};
@@ -597,9 +563,6 @@ public class NfcAppFrame extends JFrame {
 				model.addColumn(name);
 //	            System.out.println(name);
 			}
-//	        for (ArrayList<Object> row : NDEFData) {
-//	            model.addRow(row.toArray());
-//	        }
 
 			boolean ndef = false;
 //			// check if this tag is NDEF
@@ -643,13 +606,7 @@ public class NfcAppFrame extends JFrame {
 
 			for (int i = 0; i < blockCount; i++) {
 				rowData.add(String.valueOf(rowNum++));
-//				rowData.add("test");
-
 				if (i == 0) { // first block is readonly
-
-////				item.setBackground(Display.getDefault().getSystemColor(
-////						SWT.COLOR_GRAY));
-//				item.setText(1, "Manufacturer Info");
 					rowData.add("Manufacturer Info");
 				} else {
 					switch (NfcApp.driver_.type()) {
@@ -678,7 +635,6 @@ public class NfcAppFrame extends JFrame {
 					// System.out.println("Block:"+i+"\t"+NfcApp.driver_.toHex(data));
 					for (int j = 0; j < NfcApp.driver_.blocksize(); j++) {
 						String v = String.format("%02X", data[j]);
-//						item.setText(j + 2, v);
 						rowData.add(v);
 					}
 				} else {
@@ -686,20 +642,17 @@ public class NfcAppFrame extends JFrame {
 						rowData.add("-");
 					}
 				}
-//				rowData.add(String.valueOf(rowNum)); // ROW NUMBER
-//				if ((i + 1) % blockSize == 0) {
-				// means next cell is on the next row first col
-				// starts from 1
 				model.addRow(rowData.toArray()); // Description
 				rowData.clear();
-
-//				}
-
-//				TableItem item = new TableItem(table_, SWT.NONE);
-//				item.setText(0, "" + i);
 				NDEFData.add(null);
 			}
 			table_.setModel(model);
+
+			int i = 0;
+			for (Integer width : NDEFcolumnWidth) {
+				table_.getColumnModel().getColumn(i++).setPreferredWidth(width);
+			}
+
 			switch (NfcApp.driver_.type()) {
 			case MIFARE_CLASSIC_1K:
 			case MIFARE_CLASSIC_4K:
@@ -744,42 +697,64 @@ public class NfcAppFrame extends JFrame {
 				break;
 			}
 		} catch (Exception e) {
-//			prompt(e.getMessage(), SWT.ICON_WARNING);
-			e.printStackTrace();
+			NfcApp.prompt(NfcAppFrame.this, e.getLocalizedMessage(), "Error", MessageType.ERROR);
 		}
 	}
 
 	private boolean scan() {
-		try {
-			tabFolder.setSelectedIndex(0);
-			NfcApp.driver_.keys(keydata_.KeyA, keydata_.KeyB); // set default
-																// keys
-			table_.removeAll();
-			byte[] uid = NfcApp.driver_.scan(100);
-			System.out.println("UID=" + NfcApp.driver_.toHex(uid));
-			System.out.println("Type = " + NfcApp.driver_.type());
-			uid_.setText(NfcApp.driver_.toHex(uid));
-			name_.setText(NfcApp.driver_.name());
-			textBlocks_.setText("" + NfcApp.driver_.blockcount());
-			textBlockSize_.setText("" + NfcApp.driver_.blocksize());
+		// Show loading panel immediately
+		loadingPanel_.setVisible(true);
+		table_.setVisible(false);
+		setComponentsEnabled(false, rawPanel_, emulatePanel_, ndefPanel_);
 
-			dump();
+		new Thread(new Runnable() {
+			public void run() {
+				try {
+					tabFolder.setSelectedIndex(0);
+					NfcApp.driver_.keys(keydata_.KeyA, keydata_.KeyB); // set default keys
+					table_.removeAll();
+					byte[] uid = NfcApp.driver_.scan(100);
+					System.out.println("UID=" + NfcApp.driver_.toHex(uid));
+					System.out.println("Type = " + NfcApp.driver_.type());
+					uid_.setText(NfcApp.driver_.toHex(uid));
+					name_.setText(NfcApp.driver_.name());
+					textBlocks_.setText("" + NfcApp.driver_.blockcount());
+					textBlockSize_.setText("" + NfcApp.driver_.blocksize());
 
-			J4209N.CardType t = NfcApp.driver_.type();
-			switch (t) {
-			case MIFARE_CLASSIC_1K:
-			case MIFARE_CLASSIC_4K:
-				btnAuth_.setEnabled(true);
-				break;
-			default:
-				btnAuth_.setEnabled(false);
-				break;
+					dump();
+
+				} catch (Exception e) {
+					NfcApp.prompt(NfcAppFrame.this, e.getMessage(), "Error", MessageType.ERROR);
+				} finally {
+					// Hide loading panel after completion
+					SwingUtilities.invokeLater(new Runnable() {
+						public void run() {
+							loadingPanel_.setVisible(false);
+							table_.setVisible(true);
+							setComponentsEnabled(true, rawPanel_, emulatePanel_, ndefPanel_);
+
+							try {
+								switch (NfcApp.driver_.type()) {
+								case MIFARE_CLASSIC_1K:
+								case MIFARE_CLASSIC_4K:
+									break;
+								default:
+									btnAuth_.setEnabled(false);
+									btnRawWrite_.setEnabled(false);
+									break;
+								}
+							} catch (Exception e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+
+						}
+					});
+				}
 			}
-			return true;
-		} catch (Exception e) {
-			NfcApp.prompt(NfcAppFrame.this, e.getMessage(), "Error", MessageType.ERROR);
-		}
-		return false;
+		}).start();
+
+		return true; // Assuming true is returned on success
 	}
 
 	private boolean connect() {
@@ -860,6 +835,7 @@ public class NfcAppFrame extends JFrame {
 				if (connect()) {
 					setEnabled(true, btnDisconnect, btnScan);
 					setEnabled(false, btnRefresh, btnConnect);
+					setComponentsEnabled(true, rawPanel_, emulatePanel_, ndefPanel_);
 					status("Connection was successful.");
 				} else {
 					status("Could not connect to the port, Try again.");
@@ -881,7 +857,8 @@ public class NfcAppFrame extends JFrame {
 
 				if (disconnect()) {
 					setEnabled(true, btnRefresh, btnConnect);
-					setEnabled(false, btnDisconnect, btnScan);
+					setEnabled(false, btnDisconnect, btnScan, btnAuth_, btnRawWrite_);
+					setComponentsEnabled(false, rawPanel_, emulatePanel_, ndefPanel_);
 					status("Disconnected.");
 				}
 
@@ -899,7 +876,7 @@ public class NfcAppFrame extends JFrame {
 		btnScan.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				if (scan()) {
-					// setEnabled(true,);
+//					 setEnabled(true,);
 					status("Scan completed.");
 				}
 
@@ -937,6 +914,8 @@ public class NfcAppFrame extends JFrame {
 		panelInfo.add(lblNewLabel, gbc_lblNewLabel);
 
 		uid_ = new JTextField();
+		uid_.setBackground(new Color(255, 255, 255));
+		uid_.setEditable(false);
 		GridBagConstraints gbc_uid_ = new GridBagConstraints();
 		gbc_uid_.insets = new Insets(0, 0, 5, 5);
 		gbc_uid_.fill = GridBagConstraints.HORIZONTAL;
@@ -954,6 +933,8 @@ public class NfcAppFrame extends JFrame {
 		panelInfo.add(lblNewLabel_2, gbc_lblNewLabel_2);
 
 		name_ = new JTextField();
+		name_.setBackground(new Color(255, 255, 255));
+		name_.setEditable(false);
 		GridBagConstraints gbc_name_ = new GridBagConstraints();
 		gbc_name_.insets = new Insets(0, 0, 5, 5);
 		gbc_name_.fill = GridBagConstraints.HORIZONTAL;
@@ -971,6 +952,8 @@ public class NfcAppFrame extends JFrame {
 		panelInfo.add(lblNewLabel_3, gbc_lblNewLabel_3);
 
 		textNDEF_ = new JTextField();
+		textNDEF_.setBackground(new Color(255, 255, 255));
+		textNDEF_.setEditable(false);
 		GridBagConstraints gbc_textNDEF_ = new GridBagConstraints();
 		gbc_textNDEF_.insets = new Insets(0, 0, 5, 0);
 		gbc_textNDEF_.fill = GridBagConstraints.HORIZONTAL;
@@ -988,6 +971,8 @@ public class NfcAppFrame extends JFrame {
 		panelInfo.add(lblNewLabel_1, gbc_lblNewLabel_1);
 
 		textAuth_ = new JTextField();
+		textAuth_.setBackground(new Color(255, 255, 255));
+		textAuth_.setEditable(false);
 		GridBagConstraints gbc_textAuth_ = new GridBagConstraints();
 		gbc_textAuth_.insets = new Insets(0, 0, 0, 5);
 		gbc_textAuth_.fill = GridBagConstraints.HORIZONTAL;
@@ -1005,6 +990,8 @@ public class NfcAppFrame extends JFrame {
 		panelInfo.add(lblNewLabel_4, gbc_lblNewLabel_4);
 
 		textBlocks_ = new JTextField();
+		textBlocks_.setBackground(new Color(255, 255, 255));
+		textBlocks_.setEditable(false);
 		GridBagConstraints gbc_textBlocks_ = new GridBagConstraints();
 		gbc_textBlocks_.anchor = GridBagConstraints.WEST;
 		gbc_textBlocks_.insets = new Insets(0, 0, 0, 5);
@@ -1022,6 +1009,8 @@ public class NfcAppFrame extends JFrame {
 		panelInfo.add(lblNewLabel_5, gbc_lblNewLabel_5);
 
 		textBlockSize_ = new JTextField();
+		textBlockSize_.setBackground(new Color(255, 255, 255));
+		textBlockSize_.setEditable(false);
 		GridBagConstraints gbc_textBlockSize_ = new GridBagConstraints();
 		gbc_textBlockSize_.fill = GridBagConstraints.HORIZONTAL;
 		gbc_textBlockSize_.gridx = 5;
@@ -1029,36 +1018,37 @@ public class NfcAppFrame extends JFrame {
 		panelInfo.add(textBlockSize_, gbc_textBlockSize_);
 		textBlockSize_.setColumns(10);
 
-		JPanel tabFolderContainer = new JPanel();
-		tabFolderContainer.setBorder(new EmptyBorder(4, 8, 8, 8));
-		GridBagConstraints gbc_tabFolderContainer = new GridBagConstraints();
-		gbc_tabFolderContainer.insets = new Insets(0, 0, 5, 0);
-		gbc_tabFolderContainer.fill = GridBagConstraints.BOTH;
-		gbc_tabFolderContainer.gridx = 0;
-		gbc_tabFolderContainer.gridy = 2;
-		getContentPane().add(tabFolderContainer, gbc_tabFolderContainer);
-		GridBagLayout gbl_tabFolderContainer = new GridBagLayout();
-		gbl_tabFolderContainer.columnWidths = new int[] { 61, 0 };
-		gbl_tabFolderContainer.rowHeights = new int[] { 70, 0 };
-		gbl_tabFolderContainer.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
-		gbl_tabFolderContainer.rowWeights = new double[] { 1.0, Double.MIN_VALUE };
-		tabFolderContainer.setLayout(gbl_tabFolderContainer);
+		tabFolderContainer_ = new JLayeredPane();
+		tabFolderContainer_.setBorder(new EmptyBorder(4, 8, 8, 8));
+		GridBagConstraints gbc_tabFolderContainer_ = new GridBagConstraints();
+		gbc_tabFolderContainer_.insets = new Insets(0, 0, 5, 0);
+		gbc_tabFolderContainer_.fill = GridBagConstraints.BOTH;
+		gbc_tabFolderContainer_.gridx = 0;
+		gbc_tabFolderContainer_.gridy = 2;
+		getContentPane().add(tabFolderContainer_, gbc_tabFolderContainer_);
+		GridBagLayout gbl_tabFolderContainer_ = new GridBagLayout();
+		gbl_tabFolderContainer_.columnWidths = new int[] { 61, 0 };
+		gbl_tabFolderContainer_.rowHeights = new int[] { 342, 0 };
+		gbl_tabFolderContainer_.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
+		gbl_tabFolderContainer_.rowWeights = new double[] { 1.0, Double.MIN_VALUE };
+		tabFolderContainer_.setLayout(gbl_tabFolderContainer_);
 
 		tabFolder = new JTabbedPane(JTabbedPane.TOP);
 		GridBagConstraints gbc_tabFolder = new GridBagConstraints();
+		tabFolderContainer_.setLayer(tabFolder, 1);
 		gbc_tabFolder.fill = GridBagConstraints.BOTH;
 		gbc_tabFolder.gridx = 0;
 		gbc_tabFolder.gridy = 0;
-		tabFolderContainer.add(tabFolder, gbc_tabFolder);
+		tabFolderContainer_.add(tabFolder, gbc_tabFolder);
 
-		JPanel panel = new JPanel();
-		tabFolder.addTab("RAW", null, panel, null);
-		GridBagLayout gbl_panel = new GridBagLayout();
-		gbl_panel.columnWidths = new int[] { 763, 0 };
-		gbl_panel.rowHeights = new int[] { 64, 10, 0 };
-		gbl_panel.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
-		gbl_panel.rowWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
-		panel.setLayout(gbl_panel);
+		rawPanel_ = new JPanel();
+		tabFolder.addTab("RAW", null, rawPanel_, null);
+		GridBagLayout gbl_rawPanel_ = new GridBagLayout();
+		gbl_rawPanel_.columnWidths = new int[] { 763, 0 };
+		gbl_rawPanel_.rowHeights = new int[] { 64, 10, 0 };
+		gbl_rawPanel_.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
+		gbl_rawPanel_.rowWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
+		rawPanel_.setLayout(gbl_rawPanel_);
 
 		JPanel panel_3 = new JPanel();
 		GridBagConstraints gbc_panel_3 = new GridBagConstraints();
@@ -1066,18 +1056,20 @@ public class NfcAppFrame extends JFrame {
 		gbc_panel_3.insets = new Insets(0, 0, 5, 0);
 		gbc_panel_3.gridx = 0;
 		gbc_panel_3.gridy = 0;
-		panel.add(panel_3, gbc_panel_3);
+		rawPanel_.add(panel_3, gbc_panel_3);
 
-		JButton btnNewButton = new JButton("Raw Write");
-		btnNewButton.addActionListener(new ActionListener() {
+		btnRawWrite_ = new JButton("Raw Write");
+		btnRawWrite_.setEnabled(false);
+		btnRawWrite_.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				rawWrite();
 			}
 		});
-		btnNewButton.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/cardwrite.png")));
-		panel_3.add(btnNewButton);
+		btnRawWrite_.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/cardwrite.png")));
+		panel_3.add(btnRawWrite_);
 
 		btnAuth_ = new JButton("Auth");
+		btnAuth_.setEnabled(false);
 		btnAuth_.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				authDialog = new AuthFrame(NfcAppFrame.this);
@@ -1106,83 +1098,21 @@ public class NfcAppFrame extends JFrame {
 		gbc_scrollPane.fill = GridBagConstraints.BOTH;
 		gbc_scrollPane.gridx = 0;
 		gbc_scrollPane.gridy = 1;
-		panel.add(scrollPane, gbc_scrollPane);
-
-//		JTable table_ = new JTable();
-//		inventory_.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
-
-//		inventory_.addMouseListener(new MouseAdapter() {
-//			@Override
-//			public void mouseClicked(MouseEvent e) {
-//				if (e.getClickCount() == 2) { // Check for double-click
-//					getMemoryDetail();
-//				}
-//			}
-//		});
-//		table_.setBorder(new MatteBorder(0, 0, 0, 0, (Color) UIManager.getColor("Button.light")));
-//		table.setAutoCreateRowSorter(true); // no idea why
-//		model = new DefaultTableModel(new Object[][] {},
-//				new String[] { "Index", "EPC", "LEN", "ANT", "Times", "RSSI", "" }) {
-//			Class[] columnTypes = new Class[] { Object.class, Object.class, Object.class, Object.class, Object.class,
-//					Object.class, String.class };
-//
-//			public Class getColumnClass(int columnIndex) {
-//				return columnTypes[columnIndex];
-//			}
-//
-//			boolean[] columnEditables = new boolean[] { false, false, false, false, false, false, false };
-//
-//			public boolean isCellEditable(int row, int column) {
-//				return columnEditables[column];
-//			}
-//		};
-//
-//		inventory_.setModel(model);
-//		inventory_.getColumnModel().getColumn(5).setResizable(false);
-//
-//		inventory_.getColumnModel().getColumn(0).setPreferredWidth(40);
-//		inventory_.getColumnModel().getColumn(1).setPreferredWidth(250);
-//		inventory_.getColumnModel().getColumn(2).setPreferredWidth(40);
-//		inventory_.getColumnModel().getColumn(3).setPreferredWidth(40);
-//		inventory_.getColumnModel().getColumn(4).setPreferredWidth(40);
-//		inventory_.getColumnModel().getColumn(5).setPreferredWidth(40);
-//		inventory_.getColumnModel().getColumn(6).setPreferredWidth(40);
-//
-//		inventory_.getColumnModel().getColumn(0).setMaxWidth(100);
-//		inventory_.getColumnModel().getColumn(1).setMaxWidth(350);
-//		inventory_.getColumnModel().getColumn(2).setMaxWidth(150);
-//		inventory_.getColumnModel().getColumn(3).setMaxWidth(150);
-//		inventory_.getColumnModel().getColumn(4).setMaxWidth(150);
-//		inventory_.getColumnModel().getColumn(5).setMaxWidth(150);
-//		inventory_.getColumnModel().getColumn(6).setMaxWidth(850);
-		// TODO: increase column width
-
-		// Set the horizontal alignment to center
-//		DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
-//		centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
-//		inventory_.getColumnModel().getColumn(0).setCellRenderer(centerRenderer);
-//		inventory_.getColumnModel().getColumn(2).setCellRenderer(centerRenderer);
-//		inventory_.getColumnModel().getColumn(3).setCellRenderer(centerRenderer);
-//		inventory_.getColumnModel().getColumn(4).setCellRenderer(centerRenderer);
-//		inventory_.getColumnModel().getColumn(5).setCellRenderer(centerRenderer);
-
-//		inventory_.setEnabled(false);
-//		inventory_.getTableHeader().setReorderingAllowed(false);
-////        TableRowSorter<TableModel> sorter = new TableRowSorter<>(model);
-//		inventory_.setRowSorter(null);
+		rawPanel_.add(scrollPane, gbc_scrollPane);
 
 		table_ = new JTable(new DefaultTableModel(new Object[][] {}, new String[] {}));
 		table_.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+		table_.getTableHeader().setReorderingAllowed(false);
 		scrollPane.setViewportView(table_);
 
-		JPanel panel_1 = new JPanel();
-		tabFolder.addTab("NDEF", null, panel_1, null);
-		GridBagLayout gbl_panel_1 = new GridBagLayout();
-		gbl_panel_1.columnWidths = new int[] { 0, 0 };
-		gbl_panel_1.rowHeights = new int[] { 86, 0, 0 };
-		gbl_panel_1.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
-		gbl_panel_1.rowWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
-		panel_1.setLayout(gbl_panel_1);
+		ndefPanel_ = new JPanel();
+		tabFolder.addTab("NDEF", null, ndefPanel_, null);
+		GridBagLayout gbl_ndefPanel_ = new GridBagLayout();
+		gbl_ndefPanel_.columnWidths = new int[] { 0, 0 };
+		gbl_ndefPanel_.rowHeights = new int[] { 86, 0, 0 };
+		gbl_ndefPanel_.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
+		gbl_ndefPanel_.rowWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
+		ndefPanel_.setLayout(gbl_ndefPanel_);
 
 		JPanel panel_4 = new JPanel();
 		GridBagConstraints gbc_panel_4 = new GridBagConstraints();
@@ -1190,7 +1120,7 @@ public class NfcAppFrame extends JFrame {
 		gbc_panel_4.insets = new Insets(0, 0, 5, 0);
 		gbc_panel_4.gridx = 0;
 		gbc_panel_4.gridy = 0;
-		panel_1.add(panel_4, gbc_panel_4);
+		ndefPanel_.add(panel_4, gbc_panel_4);
 
 		JPanel panel_5 = new JPanel();
 		panel_5.setBorder(new TitledBorder(null, "NDEF", TitledBorder.LEADING, TitledBorder.TOP, null, null));
@@ -1269,7 +1199,7 @@ public class NfcAppFrame extends JFrame {
 		gbc_scrollPane_1.fill = GridBagConstraints.BOTH;
 		gbc_scrollPane_1.gridx = 0;
 		gbc_scrollPane_1.gridy = 1;
-		panel_1.add(scrollPane_1, gbc_scrollPane_1);
+		ndefPanel_.add(scrollPane_1, gbc_scrollPane_1);
 
 		ndeftable_ = new JTable();
 		String[] NDEFFormattedModelColName = { "Index", "ID", "Type", "Encoding", "Data" };
@@ -1281,15 +1211,15 @@ public class NfcAppFrame extends JFrame {
 		ndeftable_.getTableHeader().setReorderingAllowed(false);
 		scrollPane_1.setViewportView(ndeftable_);
 
-		JPanel panel_2 = new JPanel();
-		panel_2.setBorder(new EmptyBorder(8, 8, 0, 8));
-		tabFolder.addTab("EMULATE", null, panel_2, null);
-		GridBagLayout gbl_panel_2 = new GridBagLayout();
-		gbl_panel_2.columnWidths = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-		gbl_panel_2.rowHeights = new int[] { 0, 0, 0 };
-		gbl_panel_2.columnWeights = new double[] { 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, Double.MIN_VALUE };
-		gbl_panel_2.rowWeights = new double[] { 0.0, 0.0, Double.MIN_VALUE };
-		panel_2.setLayout(gbl_panel_2);
+		emulatePanel_ = new JPanel();
+		emulatePanel_.setBorder(new EmptyBorder(8, 8, 0, 8));
+		tabFolder.addTab("EMULATE", null, emulatePanel_, null);
+		GridBagLayout gbl_emulatePanel_ = new GridBagLayout();
+		gbl_emulatePanel_.columnWidths = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+		gbl_emulatePanel_.rowHeights = new int[] { 0, 0, 0 };
+		gbl_emulatePanel_.columnWeights = new double[] { 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, Double.MIN_VALUE };
+		gbl_emulatePanel_.rowWeights = new double[] { 0.0, 0.0, Double.MIN_VALUE };
+		emulatePanel_.setLayout(gbl_emulatePanel_);
 
 		JLabel lblUID = new JLabel("UID");
 		GridBagConstraints gbc_lblUID = new GridBagConstraints();
@@ -1297,7 +1227,7 @@ public class NfcAppFrame extends JFrame {
 		gbc_lblUID.insets = new Insets(0, 0, 5, 5);
 		gbc_lblUID.gridx = 0;
 		gbc_lblUID.gridy = 0;
-		panel_2.add(lblUID, gbc_lblUID);
+		emulatePanel_.add(lblUID, gbc_lblUID);
 
 		emulationUid_ = new JTextField(6);
 		emulationUid_.setDocument(new JTextFieldLimit(6));
@@ -1308,7 +1238,7 @@ public class NfcAppFrame extends JFrame {
 		gbc_emulationUid_.fill = GridBagConstraints.HORIZONTAL;
 		gbc_emulationUid_.gridx = 1;
 		gbc_emulationUid_.gridy = 0;
-		panel_2.add(emulationUid_, gbc_emulationUid_);
+		emulatePanel_.add(emulationUid_, gbc_emulationUid_);
 		emulationUid_.setColumns(10);
 
 		JLabel lblTimeout = new JLabel("Timeout (sec)");
@@ -1316,7 +1246,7 @@ public class NfcAppFrame extends JFrame {
 		gbc_lblTimeout.insets = new Insets(0, 0, 5, 5);
 		gbc_lblTimeout.gridx = 2;
 		gbc_lblTimeout.gridy = 0;
-		panel_2.add(lblTimeout, gbc_lblTimeout);
+		emulatePanel_.add(lblTimeout, gbc_lblTimeout);
 
 		timeout_ = new JSpinner();
 		timeout_.setModel(new SpinnerNumberModel(60, 0, 30000, 1));
@@ -1324,14 +1254,14 @@ public class NfcAppFrame extends JFrame {
 		gbc_timeout_.insets = new Insets(0, 0, 5, 5);
 		gbc_timeout_.gridx = 3;
 		gbc_timeout_.gridy = 0;
-		panel_2.add(timeout_, gbc_timeout_);
+		emulatePanel_.add(timeout_, gbc_timeout_);
 
 		btnWritable_ = new JCheckBox("Writable");
 		GridBagConstraints gbc_btnWritable_ = new GridBagConstraints();
 		gbc_btnWritable_.insets = new Insets(0, 0, 5, 5);
 		gbc_btnWritable_.gridx = 4;
 		gbc_btnWritable_.gridy = 0;
-		panel_2.add(btnWritable_, gbc_btnWritable_);
+		emulatePanel_.add(btnWritable_, gbc_btnWritable_);
 
 		JButton btnApply_ = new JButton("Apply");
 		btnApply_.addActionListener(new ActionListener() {
@@ -1346,7 +1276,7 @@ public class NfcAppFrame extends JFrame {
 		gbc_btnApply_.insets = new Insets(0, 0, 5, 5);
 		gbc_btnApply_.gridx = 5;
 		gbc_btnApply_.gridy = 0;
-		panel_2.add(btnApply_, gbc_btnApply_);
+		emulatePanel_.add(btnApply_, gbc_btnApply_);
 
 		JButton btnStart_ = new JButton("Start");
 		btnStart_.addActionListener(new ActionListener() {
@@ -1360,7 +1290,7 @@ public class NfcAppFrame extends JFrame {
 		gbc_btnStart_.insets = new Insets(0, 0, 5, 5);
 		gbc_btnStart_.gridx = 6;
 		gbc_btnStart_.gridy = 0;
-		panel_2.add(btnStart_, gbc_btnStart_);
+		emulatePanel_.add(btnStart_, gbc_btnStart_);
 
 		JButton btnStop_ = new JButton("Stop");
 		btnStop_.addActionListener(new ActionListener() {
@@ -1374,7 +1304,7 @@ public class NfcAppFrame extends JFrame {
 		gbc_btnStop_.insets = new Insets(0, 0, 5, 0);
 		gbc_btnStop_.gridx = 7;
 		gbc_btnStop_.gridy = 0;
-		panel_2.add(btnStop_, gbc_btnStop_);
+		emulatePanel_.add(btnStop_, gbc_btnStop_);
 
 		JLabel lblTime = new JLabel("Time");
 		GridBagConstraints gbc_lblTime = new GridBagConstraints();
@@ -1382,7 +1312,7 @@ public class NfcAppFrame extends JFrame {
 		gbc_lblTime.insets = new Insets(0, 0, 0, 5);
 		gbc_lblTime.gridx = 0;
 		gbc_lblTime.gridy = 1;
-		panel_2.add(lblTime, gbc_lblTime);
+		emulatePanel_.add(lblTime, gbc_lblTime);
 
 		elapsed_ = new JTextField();
 		elapsed_.setText("0");
@@ -1391,8 +1321,46 @@ public class NfcAppFrame extends JFrame {
 		gbc_elapsed_.fill = GridBagConstraints.HORIZONTAL;
 		gbc_elapsed_.gridx = 1;
 		gbc_elapsed_.gridy = 1;
-		panel_2.add(elapsed_, gbc_elapsed_);
+		emulatePanel_.add(elapsed_, gbc_elapsed_);
 		elapsed_.setColumns(10);
+
+		loadingPanel_ = new TransparentPanel();
+		loadingPanel_.setVisible(false);
+		loadingPanel_.setForeground(new Color(0, 0, 0));
+		tabFolderContainer_.setLayer(loadingPanel_, 100);
+		loadingPanel_.setBackground(new Color(244, 244, 244));
+		GridBagConstraints gbc_loadingPanel_ = new GridBagConstraints();
+
+		gbc_loadingPanel_.fill = GridBagConstraints.BOTH;
+		gbc_loadingPanel_.gridx = 0;
+		gbc_loadingPanel_.gridy = 0;
+		GridBagLayout gbl_loadingPanel_ = new GridBagLayout();
+		gbl_loadingPanel_.columnWidths = new int[] { 146, 0 };
+		gbl_loadingPanel_.rowHeights = new int[] { 0, 0, 0 };
+		gbl_loadingPanel_.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
+		gbl_loadingPanel_.rowWeights = new double[] { 1.0, 1.0, Double.MIN_VALUE };
+		loadingPanel_.setLayout(gbl_loadingPanel_);
+
+		tabFolderContainer_.add(loadingPanel_, gbc_loadingPanel_);
+
+		progressBar_ = new JProgressBar();
+		progressBar_.setPreferredSize(new Dimension(250, 25));
+		progressBar_.setFont(new Font("Tahoma", Font.PLAIN, 16));
+		progressBar_.setIndeterminate(true);
+		GridBagConstraints gbc_progressBar_ = new GridBagConstraints();
+		gbc_progressBar_.anchor = GridBagConstraints.SOUTH;
+		gbc_progressBar_.insets = new Insets(0, 0, 5, 0);
+		gbc_progressBar_.gridx = 0;
+		gbc_progressBar_.gridy = 0;
+		loadingPanel_.add(progressBar_, gbc_progressBar_);
+
+		lblLoadingText_ = new JLabel("Loading Memory Content");
+		lblLoadingText_.setFont(new Font("Tahoma", Font.PLAIN, 16));
+		GridBagConstraints gbc_lblLoadingText_ = new GridBagConstraints();
+		gbc_lblLoadingText_.anchor = GridBagConstraints.NORTH;
+		gbc_lblLoadingText_.gridx = 0;
+		gbc_lblLoadingText_.gridy = 1;
+		loadingPanel_.add(lblLoadingText_, gbc_lblLoadingText_);
 
 		JPanel panelFooter = new JPanel();
 		panelFooter.setBorder(new EmptyBorder(0, 8, 4, 8));
@@ -1405,7 +1373,7 @@ public class NfcAppFrame extends JFrame {
 		gbl_panelFooter.columnWidths = new int[] { 384, 1, 0 };
 		gbl_panelFooter.rowHeights = new int[] { 42, 0 };
 		gbl_panelFooter.columnWeights = new double[] { 1.0, 1.0, Double.MIN_VALUE };
-		gbl_panelFooter.rowWeights = new double[] { 1.0, Double.MIN_VALUE };
+		gbl_panelFooter.rowWeights = new double[] { 0.0, Double.MIN_VALUE };
 		panelFooter.setLayout(gbl_panelFooter);
 
 		JPanel panelStatus = new JPanel();
@@ -1431,6 +1399,8 @@ public class NfcAppFrame extends JFrame {
 		lblVersion
 				.setText("Library Version : " + NfcApp.driver_.LibraryVersion() + " | " + "Version: " + NfcApp.VERSION);
 		panel_7.add(lblVersion);
+
+		setComponentsEnabled(false, rawPanel_, emulatePanel_, ndefPanel_);
 
 		this.setSize(798, 565);
 		this.setLocationRelativeTo(null);
@@ -1491,7 +1461,7 @@ class EmulationWorker extends SwingWorker<Void, Void> {
 
 }
 
-//Custom class representing a tuple of two values
+//Custom class for row col rawEdit value
 class Tuple<A, B> {
 	private final A row;
 	private final B col;
@@ -1508,4 +1478,28 @@ class Tuple<A, B> {
 	public B getCol() {
 		return col;
 	}
+}
+
+class TransparentPanel extends JPanel {
+	public TransparentPanel() {
+		setOpaque(false); // Set panel's opacity to false
+	}
+
+	@Override
+	protected void paintComponent(Graphics g) {
+		// Paint a transparent background
+		g.setColor(new Color(0, 153, 255, 100)); // Transparent color
+		g.fillRect(0, 0, getWidth(), getHeight()); // Fill the panel with transparent color
+		super.paintComponent(g); // Call super method to paint other components
+	}
+
+	@Override
+	protected void paintChildren(Graphics g) {
+		// Paint the children components
+		Graphics2D g2d = (Graphics2D) g.create();
+		g2d.setComposite(AlphaComposite.SrcOver.derive(1f)); // Set full opacity
+		super.paintChildren(g2d); // Call super method to paint children components
+		g2d.dispose();
+	}
+
 }

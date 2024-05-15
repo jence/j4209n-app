@@ -16,6 +16,7 @@ import javax.swing.JFileChooser;
 import javax.swing.JButton;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.MatteBorder;
+import javax.management.modelmbean.ModelMBean;
 import javax.print.attribute.AttributeSet;
 import javax.swing.AbstractCellEditor;
 import javax.swing.BorderFactory;
@@ -46,6 +47,10 @@ import javax.swing.text.AbstractDocument;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
 import javax.swing.text.DocumentFilter.FilterBypass;
+import javax.xml.crypto.Data;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.TableItem;
 
 import jence.jni.J4209N;
 import jence.jni.Vcard;
@@ -65,6 +70,7 @@ import java.io.IOException;
 import java.lang.ref.Cleaner.Cleanable;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -201,6 +207,158 @@ public class NfcAppFrame extends JFrame {
 			NfcApp.prompt(this, e.getMessage(), "Error", MessageType.ERROR);
 		}
 		return false;
+	}
+
+	private void rawWrite() {
+		// take an empty data holder array of blocksize length 64 length, 16byte each
+		// blcok
+		// take a range array of usrmem()
+		// loop through the range[0] and range[1]
+//				take each writable row 
+//				loop through the row and fetch the only the block data leaving index and description 
+//		  				getText and getData compare to find if the value was changed 
+//				writing happens block by block or row by row so write taks an byte[] of data row
+
+//	
+
+		byte[] data;
+		try {
+			data = new byte[NfcApp.driver_.blocksize()];
+			DefaultTableModel model = (DefaultTableModel) table_.getModel();
+			for (Tuple<Integer, Integer> cell : editedValue) {
+				System.out.println("Row: " + cell.getRow() + ", Col: " + cell.getCol());
+				for (int i = 2; i < data.length; i++) {
+					String cellData = model.getValueAt(cell.getRow(), i).toString();
+					data[i - 2] = (byte) Integer.parseInt(cellData, 16);
+				}
+				byte[] vdata;
+				switch (NfcApp.driver_.type()) {
+				case MIFARE_CLASSIC_1K:
+				case MIFARE_CLASSIC_4K:
+					// a sync operation is need to start from a known state
+					NfcApp.driver_.sync();
+					int startBlock = (cell.getRow() / 4) * 4;
+					vdata = NfcApp.driver_.read(startBlock, false); // we
+																	// have
+																	// to
+																	// read
+																	// start
+																	// block
+					break;
+				}
+				boolean success = NfcApp.driver_.write(cell.getRow(), data, false); // write
+																					// new
+																					// data
+				if (!success) {
+					throw new Exception("Failed to write into block " + cell.getRow() + " using Key A");
+				}
+
+				vdata = NfcApp.driver_.read(cell.getRow(), false); // read same block to
+																	// verify
+				if (vdata == null) {
+					throw new Exception("Failed to read block " + cell.getRow() + ". Read operation failed.");
+				}
+				boolean equal = Arrays.equals(data, vdata);
+				if (!equal) {
+					BigInteger a = new BigInteger(data);
+					BigInteger b = new BigInteger(vdata);
+					throw new Exception("Failed to write data into block " + cell.getRow() + " (Sector = "
+							+ (cell.getRow() / 4) + ". Attempted to write data " + a.toString(16)
+							+ " (hex) but instead found " + b.toString(16) + " (hex).");
+				}
+
+			}
+//			 All writes were successful
+			status("Write Successful......");
+			editedValue.clear();
+			table_.repaint();
+		} catch (Exception e) {
+			NfcApp.prompt(NfcAppFrame.this, e.getLocalizedMessage(), "Error", MessageType.ERROR);
+
+		}
+//		byte[] data;
+//		try {
+//			data = new byte[NfcApp.driver_.blocksize()];
+//			int[] range = NfcApp.driver_.usrmem();
+//			for (int i = range[0]; i < range[1]; i++) {
+//				switch (NfcApp.driver_.type()) {
+//				case MIFARE_CLASSIC_1K:
+//				case MIFARE_CLASSIC_4K:
+//					if (i % 4 == 3)
+//						continue; // trailer block is not user memory (MIFARE
+//									// CLASSIC ONLY)
+//					break;
+//				}
+//				TableItem item = table_.getItem(i);
+//				boolean hasData = false;
+//				final int offset = 2;
+//				for (int j = 0; j < data.length; j++) {
+//					int jj = j + offset;
+//					String newData = item.getText(jj);
+//					String oldData = (String) item.getData(jj + "");
+//					if (oldData != null) {
+//						hasData = true;
+//					}
+//					data[j] = (byte) Integer.parseInt(newData, 16);
+//				}
+//				if (hasData) {
+//					byte[] vdata;
+//					switch (NfcApp.driver_.type()) {
+//					case MIFARE_CLASSIC_1K:
+//					case MIFARE_CLASSIC_4K:
+//						// a sync operation is need to start from a known state
+//						NfcApp.driver_.sync();
+//						int startBlock = (i / 4) * 4;
+//						vdata = NfcApp.driver_.read(startBlock, false); // we
+//																		// have
+//																		// to
+//																		// read
+//																		// start
+//																		// block
+//						break;
+//					}
+//					boolean success = NfcApp.driver_.write(i, data, false); // write
+//																			// new
+//																			// data
+//					if (!success) {
+//						throw new Exception("Failed to write into block " + i
+//								+ " using Key A");
+//					}
+//					vdata = NfcApp.driver_.read(i, false); // read same block to
+//															// verify
+//					if (vdata == null) {
+//						throw new Exception("Failed to read block " + i
+//								+ ". Read operation failed.");
+//					}
+//					boolean equal = Arrays.equals(data, vdata);
+//					if (!equal) {
+//						BigInteger a = new BigInteger(data);
+//						BigInteger b = new BigInteger(vdata);
+//						throw new Exception("Failed to write data into block "
+//								+ i + " (Sector = " + (i / 4)
+//								+ ". Attempted to write data " + a.toString(16)
+//								+ " (hex) but instead found " + b.toString(16)
+//								+ " (hex).");
+//					}
+//				}
+//			}
+//			// All writes were successful, so remove all the old data
+//			for (int i = 0; i < table_.getItemCount(); i++) {
+//				TableItem item = table_.getItem(i);
+//				for (int j = 0; j < table_.getColumnCount(); j++) {
+//					String oldData = (String) item.getData(j + "");
+//					if (oldData != null) {
+//						item.setData(j + "", null); // clear stored data
+//						item.setFont(j, null);
+//					}
+//				}
+//			}
+//		} catch (Exception e) {
+//			NfcApp.prompt(this.getShell(), e.getLocalizedMessage(), SWT.OK
+//					| SWT.ICON_WARNING);
+//			return;
+//		}
+
 	}
 
 	private boolean ndefErase() {
@@ -362,6 +520,7 @@ public class NfcAppFrame extends JFrame {
 	}
 
 	private void dump() {
+		editedValue.clear();
 		try {
 			// remove all rows and columns
 			while (NDEFModel.getRowCount() > 0) {
@@ -425,10 +584,11 @@ public class NfcAppFrame extends JFrame {
 					int row = e.getFirstRow();
 					int column = e.getColumn();
 					if (row >= 0 && column >= 0) {
-						Object oldValue = model.getValueAt(row, column);
-						Object newValue = model.getValueAt(row, column);
-						System.out.println("Cell changed at row " + row + ", column " + column + ". Old value: "
-								+ oldValue + ", New value: " + newValue);
+//						Object oldValue = model.getValueAt(row, column);
+//						Object newValue = model.getValueAt(row, column);
+//						System.out.println("Cell changed at row " + row + ", column " + column + ". Old value: "
+//								+ oldValue + ", New value: " + newValue);
+						editedValue.add(new Tuple<Integer, Integer>(row, column));
 					}
 				}
 			});
@@ -909,6 +1069,11 @@ public class NfcAppFrame extends JFrame {
 		panel.add(panel_3, gbc_panel_3);
 
 		JButton btnNewButton = new JButton("Raw Write");
+		btnNewButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				rawWrite();
+			}
+		});
 		btnNewButton.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/cardwrite.png")));
 		panel_3.add(btnNewButton);
 
@@ -1296,6 +1461,7 @@ class CustomRenderer extends DefaultTableCellRenderer {
 		for (Tuple<Integer, Integer> tuple : NfcAppFrame.editedValue) {
 			if (tuple.getRow() == row && tuple.getCol() == column) {
 				setFont(boldFont);
+				cell.setBackground(Color.decode("#b5daf7"));
 			}
 		}
 

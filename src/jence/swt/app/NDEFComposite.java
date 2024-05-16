@@ -76,7 +76,7 @@ public class NDEFComposite extends Composite {
 	private Combo comboVersion_;
 	private Label lblWebsite;
 	private Text textUrl_;
-	
+
 	private void updateGui() {
 		if (btnVcard_.getSelection()) {
 			vcarddata_.setVisible(true);
@@ -90,8 +90,7 @@ public class NDEFComposite extends Composite {
 	public NDEFComposite(Composite arg0, int arg1) {
 		super(arg0, arg1);
 		composite_ = this;
-		composite_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false,
-				false, 1, 1));
+		composite_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 1));
 		setLayout(new GridLayout(3, false));
 
 		grpReccordType_ = new Group(this, SWT.NONE);
@@ -162,69 +161,69 @@ public class NDEFComposite extends Composite {
 
 		text_ = new Text(this, SWT.BORDER | SWT.MULTI);
 		text_.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 2, 1));
-		
+
 		vcarddata_ = new Composite(this, SWT.NONE);
 		vcarddata_.setLayout(new GridLayout(7, false));
 		vcarddata_.setLayoutData(new GridData(SWT.FILL, SWT.FILL, false, false, 2, 1));
-		
+
 		comboPrefix_ = new Combo(vcarddata_, SWT.READ_ONLY);
-		comboPrefix_.setItems(new String[] {"Mr", "Mrs", "Ms"});
+		comboPrefix_.setItems(new String[] { "Mr", "Mrs", "Ms" });
 		comboPrefix_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		comboPrefix_.select(0);
-		
+
 		Label lblFirstName = new Label(vcarddata_, SWT.NONE);
 		lblFirstName.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		lblFirstName.setText("First Name");
-		
+
 		textFirstName_ = new Text(vcarddata_, SWT.BORDER);
 		textFirstName_.setToolTipText("First Name must be provided.");
 		textFirstName_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
-		
+
 		Label lblLastName = new Label(vcarddata_, SWT.NONE);
 		lblLastName.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		lblLastName.setText("Last Name");
-		
+
 		textLastName_ = new Text(vcarddata_, SWT.BORDER);
 		textLastName_.setToolTipText("Last Name must be provided.");
 		textLastName_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
-		
+
 		Label lblOtherNames = new Label(vcarddata_, SWT.NONE);
 		lblOtherNames.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		lblOtherNames.setText("Other Names");
-		
+
 		textOtherNames_ = new Text(vcarddata_, SWT.BORDER);
 		textOtherNames_.setToolTipText("Optional");
 		textOtherNames_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
-		
+
 		comboVersion_ = new Combo(vcarddata_, SWT.READ_ONLY);
-		comboVersion_.setItems(new String[] {"2.1", "3.0"});
+		comboVersion_.setItems(new String[] { "2.1", "3.0" });
 		comboVersion_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		comboVersion_.select(0);
-		
+
 		Label lblTelHome = new Label(vcarddata_, SWT.NONE);
 		lblTelHome.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		lblTelHome.setText("Tel Home");
-		
+
 		textTelHome_ = new Text(vcarddata_, SWT.BORDER);
 		textTelHome_.setToolTipText("Optional - Home telephone");
 		textTelHome_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
-		
+
 		Label lblTelWork = new Label(vcarddata_, SWT.NONE);
 		lblTelWork.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		lblTelWork.setText("Tel Work");
-		
+
 		textTelWork_ = new Text(vcarddata_, SWT.BORDER);
 		textTelWork_.setToolTipText("Optional - Work Telephone");
 		textTelWork_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
-		
+
 		Label lblEmail = new Label(vcarddata_, SWT.NONE);
 		lblEmail.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		lblEmail.setText("Email");
-		
+
 		textEmail_ = new Text(vcarddata_, SWT.BORDER);
 		textEmail_.setToolTipText("Email must be provided.");
 		textEmail_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
-		
+
 		btnDefault = new Button(vcarddata_, SWT.NONE);
 		btnDefault.addSelectionListener(new SelectionAdapter() {
 			@Override
@@ -248,80 +247,80 @@ public class NDEFComposite extends Composite {
 			}
 		});
 		btnDefault.setText("Default");
-		
+
 		lblTitle = new Label(vcarddata_, SWT.NONE);
 		lblTitle.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		lblTitle.setText("Title");
-		
+
 		textTitle_ = new Text(vcarddata_, SWT.BORDER);
 		textTitle_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 3, 1));
-		
+
 		Label lblCompany = new Label(vcarddata_, SWT.NONE);
 		lblCompany.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		lblCompany.setText("Company");
-		
+
 		textCompany_ = new Text(vcarddata_, SWT.BORDER);
 		textCompany_.setToolTipText("Optional - Company Name");
 		textCompany_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		new Label(vcarddata_, SWT.NONE);
-		
+
 		Label lblNumber = new Label(vcarddata_, SWT.NONE);
 		lblNumber.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		lblNumber.setText("Number");
-		
+
 		textNumber_ = new Text(vcarddata_, SWT.BORDER);
 		textNumber_.setToolTipText("Optional (Number)");
 		textNumber_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
-		
+
 		lblNewLabel = new Label(vcarddata_, SWT.NONE);
 		lblNewLabel.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		lblNewLabel.setText("Street");
-		
+
 		textStreet_ = new Text(vcarddata_, SWT.BORDER);
 		textStreet_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
-		
+
 		lblNewLabel_1 = new Label(vcarddata_, SWT.NONE);
 		lblNewLabel_1.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		lblNewLabel_1.setText("Locality");
-		
+
 		textLocality_ = new Text(vcarddata_, SWT.BORDER);
 		textLocality_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		new Label(vcarddata_, SWT.NONE);
-		
+
 		lblRegion = new Label(vcarddata_, SWT.NONE);
 		lblRegion.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		lblRegion.setText("Region");
-		
+
 		textRegion_ = new Text(vcarddata_, SWT.BORDER);
 		textRegion_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
-		
+
 		lblZip = new Label(vcarddata_, SWT.NONE);
 		lblZip.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		lblZip.setText("Zip");
-		
+
 		textZip_ = new Text(vcarddata_, SWT.BORDER);
 		textZip_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
-		
+
 		lblCountry = new Label(vcarddata_, SWT.NONE);
 		lblCountry.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		lblCountry.setText("Country");
-		
+
 		textCountry_ = new Text(vcarddata_, SWT.BORDER);
 		textCountry_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		new Label(vcarddata_, SWT.NONE);
-		
+
 		Label lblPoBox = new Label(vcarddata_, SWT.NONE);
 		lblPoBox.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		lblPoBox.setText("PO Box");
-		
+
 		textPOBox_ = new Text(vcarddata_, SWT.BORDER);
 		textPOBox_.setToolTipText("Optional - PO Box Number");
 		textPOBox_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
-		
+
 		lblWebsite = new Label(vcarddata_, SWT.NONE);
 		lblWebsite.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
 		lblWebsite.setText("Website");
-		
+
 		textUrl_ = new Text(vcarddata_, SWT.BORDER);
 		textUrl_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 3, 1));
 
@@ -335,16 +334,14 @@ public class NDEFComposite extends Composite {
 				ndefWrite(false);
 			}
 		});
-		btnWrite.setImage(SWTResourceManager.getImage(NDEFComposite.class,
-				"/jence/icon/write.png"));
+		btnWrite.setImage(SWTResourceManager.getImage(NDEFComposite.class, "/jence/icon/write.png"));
 		btnWrite.setToolTipText("Write NDEF data.");
 		btnWrite.setText("Write");
 
 		Button btnEraseWrite_ = new Button(this, SWT.NONE);
-		btnEraseWrite_
-				.setToolTipText("This operation will erase previous content and write a new record. If the card was not NDEF formatted, it will be formatted.");
-		btnEraseWrite_.setImage(SWTResourceManager.getImage(
-				NDEFComposite.class, "/jence/icon/cardwrite.png"));
+		btnEraseWrite_.setToolTipText(
+				"This operation will erase previous content and write a new record. If the card was not NDEF formatted, it will be formatted.");
+		btnEraseWrite_.setImage(SWTResourceManager.getImage(NDEFComposite.class, "/jence/icon/cardwrite.png"));
 		btnEraseWrite_.setText("Erase + Write");
 		btnEraseWrite_.addSelectionListener(new SelectionAdapter() {
 			@Override
@@ -356,18 +353,18 @@ public class NDEFComposite extends Composite {
 
 		lblStatus_ = new Label(this, SWT.NONE);
 		lblStatus_.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false, 3, 1));
-		
+
 		updateGui();
-		
+
 		this.getShell().pack();
 	}
 
 	public void callback(Callback runnable) {
 		callback_ = runnable;
 	}
-	
+
 	private void checkBlank(Text... text) throws Exception {
-		for(Text t : text) {
+		for (Text t : text) {
 			if (t.getText().trim().length() == 0)
 				throw new Exception(t.getToolTipText());
 		}
@@ -378,15 +375,12 @@ public class NDEFComposite extends Composite {
 		if (btnVcard_.getSelection()) {
 			try {
 				checkBlank(textFirstName_, textLastName_, textEmail_);
-			} catch(Exception e) {
-				NfcApp.prompt(this.getShell(),
-						e.getLocalizedMessage(),
-						SWT.OK | SWT.ICON_WARNING);
+			} catch (Exception e) {
+				NfcApp.prompt(this.getShell(), e.getLocalizedMessage(), SWT.OK | SWT.ICON_WARNING);
 				return;
 			}
 		} else if (text.length() == 0) {
-			NfcApp.prompt(this.getShell(),
-					"There are no text to write. Please provide a valid text.",
+			NfcApp.prompt(this.getShell(), "There are no text to write. Please provide a valid text.",
 					SWT.OK | SWT.ICON_WARNING);
 			return;
 		}
@@ -394,7 +388,7 @@ public class NDEFComposite extends Composite {
 			try {
 				if (btnVcard_.getSelection()) {
 					Vcard vcard = new Vcard();
-					
+
 					vcard.version_ = comboVersion_.getText();
 					vcard.name_.FirstName = textFirstName_.getText();
 					vcard.name_.LastName = textLastName_.getText();
@@ -403,10 +397,10 @@ public class NDEFComposite extends Composite {
 					vcard.org_ = textCompany_.getText();
 					vcard.email_ = textEmail_.getText();
 					vcard.url_ = textUrl_.getText();
-					
+
 					vcard.hphone_.Type = "Home";
 					vcard.hphone_.Voice = textTelHome_.getText();
-					
+
 					vcard.wphone_.Type = "Work";
 					vcard.wphone_.Voice = textTelWork_.getText();
 
@@ -418,18 +412,16 @@ public class NDEFComposite extends Composite {
 					vcard.haddress_.Zip = textZip_.getText();
 					vcard.haddress_.Country = textCountry_.getText();
 					vcard.haddress_.PObox = textPOBox_.getText();
-					
+
 					text = vcard.toVcard();
 				}
-				callback_.callback((eraseWrite)?1:0, selection_, text);
+				callback_.callback((eraseWrite) ? 1 : 0, selection_, text);
 				this.getShell().dispose();
 
 			} catch (Exception e) {
-				NfcApp.prompt(this.getShell(), e.getLocalizedMessage(), SWT.OK
-						| SWT.ICON_WARNING);
+				NfcApp.prompt(this.getShell(), e.getLocalizedMessage(), SWT.OK | SWT.ICON_WARNING);
 			}
 		}
 	}
-	
-}
 
+}

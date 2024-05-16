@@ -21,11 +21,9 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import javax.swing.border.TitledBorder;
 
-
 import jence.jni.J4209N;
 import jence.jni.Vcard;
 import jence.swing.app.NfcApp.MessageType;
-
 
 public class NDEFDialog extends JDialog {
 
@@ -53,6 +51,7 @@ public class NDEFDialog extends JDialog {
 	private JEditorPane text_;
 
 	private int selection_;
+	private NfcAppFrame parent;
 
 	private final ButtonGroup buttonGroup = new ButtonGroup();
 
@@ -80,68 +79,32 @@ public class NDEFDialog extends JDialog {
 		switch (selection) {
 		case 0:
 			NfcApp.driver_.ndefAddUri("https://" + text);
-//			status("https written successfully.");
+			NfcAppFrame.status("https written successfully.");
 			break; // https
 		case 1:
 			NfcApp.driver_.ndefAddUri("http://" + text);
-//			status("http written successfully.");
+			NfcAppFrame.status("http written successfully.");
 			break; // http
 		case 2:
 			NfcApp.driver_.ndefAddText(text);
-//			status("text written successfully.");
+			NfcAppFrame.status("text written successfully.");
 			break; // text
 		case 3:
 			NfcApp.driver_.ndefAddUri("tel://" + text);
-//			status("tel written successfully.");
+			NfcAppFrame.status("tel written successfully.");
 			break; // phone
 		case 4:
 			NfcApp.driver_.ndefAddUri("mailto://" + text);
-//			status("email written successfully.");
+			NfcAppFrame.status("email written successfully.");
 			break; // email
 		case 5:
 			Vcard vcard = new Vcard(text);
 			NfcApp.driver_.ndefAddVcard(vcard);
-//			status("Vcard written successfully.");
+			NfcAppFrame.status("Vcard written successfully.");
 			break; // vcard
 		}
 	}
-	
-//	private boolean readNDEF() {
-//		try {
-//			ndeftable_.removeAll();
-//			NfcApp.driver_.sync();
-//			if (!NfcApp.driver_.isNDEF()) {
-//				prompt("No NDEF record found or the card may not be NDEF formatted.",
-//						SWT.ICON_WARNING);
-//				return false;
-//			}
-//			int records = NfcApp.driver_.ndefRead();
-//			if (records > 0) {
-//				ndeftable_.removeAll();
-//				for (int i = 0; i < records; i++) {
-//					J4209N.NdefRecord ndef = NfcApp.driver_.ndefGetRecord(i);
-//					TableItem item = new TableItem(ndeftable_,
-//							SWT.FULL_SELECTION | SWT.OK);
-//					item.setText(0, "" + i);
-//					item.setText(1, ndef.id);
-//					item.setText(2, ndef.type);
-//					item.setText(3, ndef.encoding);
-//					item.setText(4, new String(ndef.payload, "UTF-8"));
-//				}
-//				return true;
-//			} else {
-//				prompt("No NDEF records found.", SWT.OK);
-//				return false;
-//			}
-//		} catch (Exception e) {
-//			prompt(e.getMessage()
-//					+ " Please check if the device is attached to an USB port.",
-//					SWT.ICON_WARNING);
-//		}
-//		return false;
-//	}
 
-	// Method to invoke the callback
 	private void updateGui() {
 		if (btnVcard_.isSelected()) {
 			vCardData_.setVisible(true);
@@ -155,6 +118,7 @@ public class NDEFDialog extends JDialog {
 	public NDEFDialog(NfcAppFrame parent) {
 		// TODO Auto-generated constructor stub
 		super(parent, "NDEF Data", true);
+		this.parent = parent;
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
 		this.setSize(801, 602);
@@ -756,10 +720,7 @@ public class NDEFDialog extends JDialog {
 					vcard.haddress_.PObox = textPOBox_.getText();
 
 					text = vcard.toVcard();
-//					System.out.println("from callback");
 				}
-//				callback_.callback(, selection_, text);
-//				callback((eraseWrite) ? 1 : 0, selection_, text);
 				try {
 					callbackWrite((eraseWrite) ? 1 : 0, selection_, text);
 				} catch (Exception e) {

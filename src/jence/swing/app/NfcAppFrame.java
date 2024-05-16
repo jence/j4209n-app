@@ -142,6 +142,60 @@ public class NfcAppFrame extends JFrame {
 	private J4209N.KeyData keydata_ = new J4209N.KeyData(0); // full access
 	private Timer timer_ = null;
 
+	public static <T extends JComponent> void setEnabled(boolean enabled, T... components) {
+		for (T component : components) {
+			component.setEnabled(enabled);
+		}
+	}
+
+	private void setComponentsEnabled(boolean isEnabled, Component... components) {
+		for (Component component : components) {
+			setComponentEnabled(component, isEnabled);
+		}
+	}
+
+	private void setComponentEnabled(Component component, boolean isEnabled) {
+		component.setEnabled(isEnabled);
+		if (component instanceof Container) {
+			Component[] childComponents = ((Container) component).getComponents();
+			for (Component childComponent : childComponents) {
+				setComponentEnabled(childComponent, isEnabled);
+			}
+		}
+	}
+
+	private boolean portlist() {
+		try {
+			String[] ports = NfcApp.driver_.listPorts();
+			comboPorts_.removeAllItems();
+			status(ports.length + " Ports Found. " + " Complete Listing Available Ports.");
+			for (int i = 0; i < ports.length; i++) {
+				comboPorts_.addItem(ports[i]);
+			}
+			if (ports.length > 0) {
+				comboPorts_.setSelectedIndex(0);
+			} else {
+				return false;
+			}
+			return true;
+		} catch (Exception e) {
+			NfcApp.prompt(NfcAppFrame.this, e.getMessage() + " Please check if the device is attached to an USB port.",
+					"Warning", MessageType.WARNING);
+
+		}
+		return false;
+	}
+
+	private boolean disconnect() {
+		try {
+			NfcApp.driver_.close();
+			return true;
+		} catch (Exception e) {
+			NfcApp.prompt(NfcAppFrame.this, e.getLocalizedMessage(), "Error", MessageType.ERROR);
+		}
+		return false;
+	}
+
 	public static void status(String text) {
 		status_.setText(text);
 	}
@@ -210,6 +264,40 @@ public class NfcAppFrame extends JFrame {
 		}
 	}
 
+	private boolean readNDEF() {
+		try {
+			NDEFFormattedModel.setRowCount(0);
+			ndeftable_.removeAll();
+			NfcApp.driver_.sync();
+			if (!NfcApp.driver_.isNDEF()) {
+				NfcApp.prompt(this, "No NDEF record found or the card may not be NDEF formatted.", "Warning",
+						MessageType.WARNING);
+				return false;
+			}
+			int records = NfcApp.driver_.ndefRead();
+			if (records > 0) {
+				ndeftable_.removeAll();
+				NDEFFormattedModel.setRowCount(0);
+				for (int i = 0; i < records; i++) {
+					J4209N.NdefRecord ndef = NfcApp.driver_.ndefGetRecord(i);
+					String[] rowValue = { String.valueOf(i), ndef.id, ndef.type, ndef.encoding,
+							new String(ndef.payload, "UTF-8") };
+					NDEFFormattedModel.addRow(rowValue);
+				}
+				return true;
+			} else {
+				NfcApp.prompt(NfcAppFrame.this, "No NDEF records found", "Warning", MessageType.WARNING);
+				return false;
+			}
+		} catch (Exception e) {
+			NfcApp.prompt(NfcAppFrame.this,
+					e.getLocalizedMessage() + " Please check if the device is attached to an USB port.", "Error",
+					MessageType.ERROR);
+
+		}
+		return false;
+	}
+
 	private boolean ndefFormat() {
 		try {
 			if (!NfcApp.prompt(this, "All data in the current card will be erased. Are you sure?", "Confirmation",
@@ -225,18 +313,44 @@ public class NfcAppFrame extends JFrame {
 		return false;
 	}
 
+	private boolean ndefErase() {
+		try {
+			if (!NfcApp.driver_.isNDEF()) {
+				NfcApp.prompt(this, "The tag is not NDEF formatted.", "Warning", MessageType.WARNING);
+				return false;
+			}
+			if (!NfcApp.prompt(this, "This operation erase all NDEF records. Do you want to proceed?", "Confirmation",
+					MessageType.CONFIRMATION)) {
+				return false;
+			}
+			NfcApp.driver_.ndefErase();
+		} catch (Exception e) {
+			NfcApp.prompt(this, e.getMessage(), "Error", MessageType.ERROR);
+		}
+		return false;
+	}
+
+	private boolean clean() {
+		try {
+			if (!NfcApp.prompt(NfcAppFrame.this,
+					"This operation will reset all the data in the card. Do you want to proceed?", "Confirmation",
+					MessageType.CONFIRMATION)) {
+				return false;
+			}
+			NfcApp.driver_.format();
+			ndeftable_.removeAll();
+			NfcApp.prompt(NfcAppFrame.this,
+					"Clean operation completed. Verify by rescanning the card/tag.? Most of the memory content will be zero. "
+							+ "If some portion of the memory is not set to zero, try again.",
+					"Information", MessageType.INFORMATION);
+			status("Memory Cleaned");
+		} catch (Exception e) {
+			NfcApp.prompt(NfcAppFrame.this, e.getLocalizedMessage(), "Error", MessageType.ERROR);
+		}
+		return false;
+	}
+
 	private void rawWrite() {
-		// take an empty data holder array of blocksize length 64 length, 16byte each
-		// blcok
-		// take a range array of usrmem()
-		// loop through the range[0] and range[1]
-//				take each writable row 
-//				loop through the row and fetch the only the block data leaving index and description 
-//		  				getText and getData compare to find if the value was changed 
-//				writing happens block by block or row by row so write taks an byte[] of data row
-
-//	
-
 		byte[] data;
 		try {
 			data = new byte[NfcApp.driver_.blocksize()];
@@ -294,133 +408,7 @@ public class NfcAppFrame extends JFrame {
 		}
 	}
 
-	private boolean ndefErase() {
-		try {
-			if (!NfcApp.driver_.isNDEF()) {
-				NfcApp.prompt(this, "The tag is not NDEF formatted.", "Warning", MessageType.WARNING);
-				return false;
-			}
-			if (!NfcApp.prompt(this, "This operation erase all NDEF records. Do you want to proceed?", "Confirmation",
-					MessageType.CONFIRMATION)) {
-				return false;
-			}
-			NfcApp.driver_.ndefErase();
-		} catch (Exception e) {
-			NfcApp.prompt(this, e.getMessage(), "Error", MessageType.ERROR);
-		}
-		return false;
-	}
-
-	private boolean clean() {
-		try {
-			if (!NfcApp.prompt(NfcAppFrame.this,
-					"This operation will reset all the data in the card. Do you want to proceed?", "Confirmation",
-					MessageType.CONFIRMATION)) {
-				return false;
-			}
-			NfcApp.driver_.format();
-			ndeftable_.removeAll();
-			NfcApp.prompt(NfcAppFrame.this,
-					"Clean operation completed. Verify by rescanning the card/tag.? Most of the memory content will be zero. "
-							+ "If some portion of the memory is not set to zero, try again.",
-					"Information", MessageType.INFORMATION);
-			status("Memory Cleaned");
-		} catch (Exception e) {
-			NfcApp.prompt(NfcAppFrame.this, e.getLocalizedMessage(), "Error", MessageType.ERROR);
-		}
-		return false;
-	}
-
-	private boolean readNDEF() {
-		try {
-			NDEFFormattedModel.setRowCount(0);
-			ndeftable_.removeAll();
-			NfcApp.driver_.sync();
-			if (!NfcApp.driver_.isNDEF()) {
-				NfcApp.prompt(this, "No NDEF record found or the card may not be NDEF formatted.", "Warning",
-						MessageType.WARNING);
-				return false;
-			}
-			int records = NfcApp.driver_.ndefRead();
-			if (records > 0) {
-				ndeftable_.removeAll();
-				NDEFFormattedModel.setRowCount(0);
-				for (int i = 0; i < records; i++) {
-					J4209N.NdefRecord ndef = NfcApp.driver_.ndefGetRecord(i);
-					String[] rowValue = { String.valueOf(i), ndef.id, ndef.type, ndef.encoding,
-							new String(ndef.payload, "UTF-8") };
-					NDEFFormattedModel.addRow(rowValue);
-				}
-				return true;
-			} else {
-				NfcApp.prompt(NfcAppFrame.this, "No NDEF records found", "Warning", MessageType.WARNING);
-				return false;
-			}
-		} catch (Exception e) {
-			NfcApp.prompt(NfcAppFrame.this,
-					e.getLocalizedMessage() + " Please check if the device is attached to an USB port.", "Error",
-					MessageType.ERROR);
-
-		}
-		return false;
-	}
-
-	private boolean portlist() {
-		try {
-			String[] ports = NfcApp.driver_.listPorts();
-			comboPorts_.removeAllItems();
-			status(ports.length + " Ports Found. " + " Complete Listing Available Ports.");
-			for (int i = 0; i < ports.length; i++) {
-				comboPorts_.addItem(ports[i]);
-			}
-			if (ports.length > 0) {
-				comboPorts_.setSelectedIndex(0);
-			} else {
-				return false;
-			}
-			return true;
-		} catch (Exception e) {
-			NfcApp.prompt(NfcAppFrame.this, e.getMessage() + " Please check if the device is attached to an USB port.",
-					"Warning", MessageType.WARNING);
-
-		}
-		return false;
-	}
-
-	private boolean disconnect() {
-		try {
-			NfcApp.driver_.close();
-			return true;
-		} catch (Exception e) {
-			NfcApp.prompt(NfcAppFrame.this, e.getLocalizedMessage(), "Error", MessageType.ERROR);
-		}
-		return false;
-	}
-
-	public static <T extends JComponent> void setEnabled(boolean enabled, T... components) {
-		for (T component : components) {
-			component.setEnabled(enabled);
-		}
-	}
-
-	private void setComponentsEnabled(boolean isEnabled, Component... components) {
-		for (Component component : components) {
-			setComponentEnabled(component, isEnabled);
-		}
-	}
-
-	private void setComponentEnabled(Component component, boolean isEnabled) {
-		component.setEnabled(isEnabled);
-		if (component instanceof Container) {
-			Component[] childComponents = ((Container) component).getComponents();
-			for (Component childComponent : childComponents) {
-				setComponentEnabled(childComponent, isEnabled);
-			}
-		}
-	}
-
 	private void openNdefWriteDialog() {
-
 		NDEFDialog = new NDEFDialog(NfcAppFrame.this);
 
 		NDEFDialog.setVisible(true);
@@ -769,10 +757,6 @@ public class NfcAppFrame extends JFrame {
 	}
 
 	public NfcAppFrame() {
-
-		editedValue.add(new Tuple(3, 3));
-
-		// TODO Auto-generated constructor stub
 		GridBagLayout gridBagLayout = new GridBagLayout();
 		gridBagLayout.columnWidths = new int[] { 63, 0 };
 		gridBagLayout.rowHeights = new int[] { 50, 0, 342, 0, 0 };
@@ -1440,7 +1424,6 @@ class CustomRenderer extends DefaultTableCellRenderer {
 }
 
 class EmulationWorker extends SwingWorker<Void, Void> {
-
 	private NfcAppFrame parent;
 
 	public EmulationWorker(NfcAppFrame parent) {
@@ -1456,7 +1439,6 @@ class EmulationWorker extends SwingWorker<Void, Void> {
 			Thread.sleep(1000);
 		}
 		return null;
-
 	}
 
 }

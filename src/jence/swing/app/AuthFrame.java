@@ -131,7 +131,7 @@ public class AuthFrame extends JDialog {
 		accessbits_.setText(accessbits);
 		data_.setText(accessbits.substring(6));
 
-//		updateRadioFromAccessBits(accessbits);
+		updateRadioFromAccessBits(accessbits);
 	}
 
 	private byte[] hex2bytes(String hex, int arraySize) {
@@ -147,35 +147,32 @@ public class AuthFrame extends JDialog {
 		}
 		return bytes;
 	}
-//	private void updateRadioFromAccessBits(String accessbits) {
-//		BigInteger bi = new BigInteger(accessbits, 16);
-//		// b0 = 100, b1 = 101, b2 = 110, b3 = 111
-//		byte[] b = bi.toByteArray();
-//		// 1111 1010 1100
-//		// int byte6 = b[3] & 0xFF;
-//		int byte7 = b[1] & 0xFF; // 0xF0;
-//		int byte8 = b[2] & 0xFF; // 0xAC;
-//
-//		int c1 = (byte7) >> 4;
-//		int c2 = (byte8 & 0x0F);
-//		int c3 = (byte8 >> 4);
-//
-//		int block0 = ((c1 & 0x01) << 2) | ((c2 & 0x01) << 1) | (c3 & 0x01);
-//		int block1 = ((c1 & 0x02) << 1) | ((c2 & 0x02) << 0)
-//				| ((c3 & 0x02) >> 1);
-//		int block2 = ((c1 & 0x04) << 0) | ((c2 & 0x04) >> 1)
-//				| ((c3 & 0x04) >> 2);
-//		int trailer = ((c1 & 0x08) >> 1) | ((c2 & 0x08) >> 2)
-//				| ((c3 & 0x08) >> 3);
-//
-//		block0_.setData(new Integer(block0));
-//		block1_.setData(new Integer(block1));
-//		block2_.setData(new Integer(block2));
-//		trailer_.setData(new Integer(trailer));
-//
-//		loadSectorTrailerSettings(0);
-//	}
-//
+
+	private void updateRadioFromAccessBits(String accessbits) {
+		BigInteger bi = new BigInteger(accessbits, 16);
+		// b0 = 100, b1 = 101, b2 = 110, b3 = 111
+		byte[] b = bi.toByteArray();
+		// 1111 1010 1100
+		// int byte6 = b[3] & 0xFF;
+		int byte7 = b[1] & 0xFF; // 0xF0;
+		int byte8 = b[2] & 0xFF; // 0xAC;
+
+		int c1 = (byte7) >> 4;
+		int c2 = (byte8 & 0x0F);
+		int c3 = (byte8 >> 4);
+
+		int block0 = ((c1 & 0x01) << 2) | ((c2 & 0x01) << 1) | (c3 & 0x01);
+		int block1 = ((c1 & 0x02) << 1) | ((c2 & 0x02) << 0) | ((c3 & 0x02) >> 1);
+		int block2 = ((c1 & 0x04) << 0) | ((c2 & 0x04) >> 1) | ((c3 & 0x04) >> 2);
+		int trailer = ((c1 & 0x08) >> 1) | ((c2 & 0x08) >> 2) | ((c3 & 0x08) >> 3);
+
+		block0_.putClientProperty("selection", new Integer(block0));
+		block1_.putClientProperty("selection", new Integer(block1));
+		block2_.putClientProperty("selection", new Integer(block2));
+		trailer_.putClientProperty("selection", new Integer(trailer));
+
+		loadSectorTrailerSettings(0);
+	}
 
 	private void useKey() {
 		String message = "Use have choosen to use this key for subsequent read and write. "
@@ -195,68 +192,69 @@ public class AuthFrame extends JDialog {
 		}
 	}
 
+	private void saveFile() throws Exception {
+		JFileChooser fileChooser = new JFileChooser();
+		fileChooser.setDialogTitle("Save");
+		fileChooser.setFileFilter(new FileNameExtensionFilter("J4210N Files (*.j4210n)", "j4210n"));
 
+		int userSelection = fileChooser.showSaveDialog(this);
+		if (userSelection == JFileChooser.APPROVE_OPTION) {
+			String filename = fileChooser.getSelectedFile().getAbsolutePath();
+			if (!filename.endsWith(".j4210n")) {
+				filename += ".j4210n";
+			}
+			String warning = " IMPORTANT: Keep this file in a safe "
+					+ "place and do not\n distribute. The file contains sensitive password information.";
+			try (FileOutputStream fos = new FileOutputStream(filename)) {
+				auth_.clear();
+				auth_.put("type", NfcApp.driver_.type().name());
+				auth_.put("trailer", trailerbits_.getText());
+				((Properties) auth_).store(fos, warning);
+				JOptionPane.showMessageDialog(this, "File saved successfully.", "Success",
+						JOptionPane.INFORMATION_MESSAGE);
+			} catch (IOException e) {
+				e.printStackTrace();
+				JOptionPane.showMessageDialog(this, e.getLocalizedMessage(), "Error", JOptionPane.WARNING_MESSAGE);
+			}
+		}
+	}
 
-    private void saveFile() throws Exception {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Save");
-        fileChooser.setFileFilter(new FileNameExtensionFilter("J4210N Files (*.j4210n)", "j4210n"));
-        
-        int userSelection = fileChooser.showSaveDialog(this);
-        if (userSelection == JFileChooser.APPROVE_OPTION) {
-            String filename = fileChooser.getSelectedFile().getAbsolutePath();
-            if (!filename.endsWith(".j4210n")) {
-                filename += ".j4210n";
-            }
-            String warning = " IMPORTANT: Keep this file in a safe "
-                    + "place and do not\n distribute. The file contains sensitive password information.";
-            try (FileOutputStream fos = new FileOutputStream(filename)) {
-                auth_.clear();
-                auth_.put("type", NfcApp.driver_.type().name());
-                auth_.put("trailer", trailerbits_.getText());
-                ((Properties) auth_).store(fos, warning);
-                JOptionPane.showMessageDialog(this, "File saved successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
-            } catch (IOException e) {
-                e.printStackTrace();
-                JOptionPane.showMessageDialog(this, e.getLocalizedMessage(), "Error", JOptionPane.WARNING_MESSAGE);
-            }
-        }
-    }
+	private Map<String, String> propertiesToMap(Properties properties) {
+		Map<String, String> map = new HashMap<>();
+		for (String key : properties.stringPropertyNames()) {
+			map.put(key, properties.getProperty(key));
+		}
+		return map;
+	}
 
-    private Map<String, String> propertiesToMap(Properties properties) {
-        Map<String, String> map = new HashMap<>();
-        for (String key : properties.stringPropertyNames()) {
-            map.put(key, properties.getProperty(key));
-        }
-        return map;
-    }
+	private Map<String, String> loadFile() throws HeadlessException, Exception {
+		JFileChooser fileChooser = new JFileChooser();
+		fileChooser.setDialogTitle("Open");
+		fileChooser.setFileFilter(new FileNameExtensionFilter("J4210N Files (*.j4210n)", "j4210n"));
 
-    private Map<String, String> loadFile() throws HeadlessException, Exception {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Open");
-        fileChooser.setFileFilter(new FileNameExtensionFilter("J4210N Files (*.j4210n)", "j4210n"));
+		int userSelection = fileChooser.showOpenDialog(this);
+		if (userSelection == JFileChooser.APPROVE_OPTION) {
+			String selected = fileChooser.getSelectedFile().getAbsolutePath();
+			Properties properties = new Properties();
+			try (FileInputStream fis = new FileInputStream(selected)) {
+				properties.load(fis);
+				String type = properties.getProperty("type");
+				if (!type.equalsIgnoreCase(NfcApp.driver_.type().name())) {
+					JOptionPane.showMessageDialog(
+							this, "The tag under scan is of type " + NfcApp.driver_.type()
+									+ " but the Auth is for type " + type + ".",
+							"Warning", JOptionPane.WARNING_MESSAGE);
+					return null;
+				}
+				return propertiesToMap(properties);
+			} catch (IOException e) {
+				e.printStackTrace();
+				JOptionPane.showMessageDialog(this, e.getLocalizedMessage(), "Error", JOptionPane.WARNING_MESSAGE);
+			}
+		}
+		return new HashMap<>(); // Return an empty map if file loading fails
+	}
 
-        int userSelection = fileChooser.showOpenDialog(this);
-        if (userSelection == JFileChooser.APPROVE_OPTION) {
-            String selected = fileChooser.getSelectedFile().getAbsolutePath();
-            Properties properties = new Properties();
-            try (FileInputStream fis = new FileInputStream(selected)) {
-                properties.load(fis);
-                String type = properties.getProperty("type");
-                if (!type.equalsIgnoreCase(NfcApp.driver_.type().name())) {
-                    JOptionPane.showMessageDialog(this, "The tag under scan is of type " + NfcApp.driver_.type()
-                            + " but the Auth is for type " + type + ".", "Warning", JOptionPane.WARNING_MESSAGE);
-                    return null;
-                }
-                return propertiesToMap(properties);
-            } catch (IOException e) {
-                e.printStackTrace();
-                JOptionPane.showMessageDialog(this, e.getLocalizedMessage(), "Error", JOptionPane.WARNING_MESSAGE);
-            }
-        }
-        return new HashMap<>(); // Return an empty map if file loading fails
-    }
-    
 	private void writeAuth(boolean defaultKwy) {
 		String warning = "You are about to change authentication by changing keys and access conditions.";
 		warning += " This will apply to all the sectors of this tag.";
@@ -420,32 +418,6 @@ public class AuthFrame extends JDialog {
 
 		return accessbits;
 	}
-
-//	private void updateAccessBits() {
-//		if (data_.getText().trim().length() == 0)
-//			data_.setText("00");
-//		int data = Integer.parseInt(data_.getText(), 16);
-//
-//		byte b0 = (byte) ((Integer) block0_.getData()).byteValue();
-//		byte b1 = (byte) ((Integer) block1_.getData()).byteValue();
-//		byte b2 = (byte) ((Integer) block2_.getData()).byteValue();
-//		byte b3 = (byte) ((Integer) trailer_.getData()).byteValue();
-//
-//		byte[] accessbits = generateAccessBits(b0, b1, b2, b3, data);
-//		String z = "";
-//		for (int i = 0; i < accessbits.length; i++) {
-//			z += String.format("%02X", accessbits[i]);
-//		}
-//		accessbits_.setText(z);
-//
-//		trailerbits_.setText(hexA_.getText() + " " + accessbits_.getText()
-//				+ " " + hexB_.getText());
-//
-//		key_ = new J4209N.KeyData(b3);
-//		key_.KeyA = hex2bytes(hexA_.getText(), 6);
-//		key_.KeyB = hex2bytes(hexB_.getText(), 6);
-//
-//	}
 
 	public AuthFrame(NfcAppFrame parent) {
 
@@ -825,7 +797,7 @@ public class AuthFrame extends JDialog {
 		JButton btnNewButton_3 = new JButton("Load");
 		btnNewButton_3.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				
+
 				Map map = null;
 				try {
 					map = loadFile();
@@ -1074,12 +1046,7 @@ class AuthTableModel extends DefaultTableModel {
 			return;
 		}
 		if (row == table.getSelectedRow()) {
-			// Set icon for the selected row
-			// Here you would load the icon from a file or resource
-			// For demonstration, I'm using an empty ImageIcon
 			ImageIcon icon = new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/checkbox16.png"));
-			// Set icon for the selected row
-			// Assuming the icon is set in the first column
 			super.setValueAt(icon, row, 0);
 		}
 	}

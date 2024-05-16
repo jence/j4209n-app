@@ -782,6 +782,8 @@ public class NfcAppFrame extends JFrame {
 	}
 
 	public NfcAppFrame() {
+		
+		this.setIconImage(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/nfc32.png")).getImage());
 		GridBagLayout gridBagLayout = new GridBagLayout();
 		gridBagLayout.columnWidths = new int[] { 63, 0 };
 		gridBagLayout.rowHeights = new int[] { 50, 0, 342, 0, 0 };

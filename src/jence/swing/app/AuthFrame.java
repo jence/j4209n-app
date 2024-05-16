@@ -87,6 +87,8 @@ public class AuthFrame extends JDialog {
 	private JRadioButton trailer_;
 	private J4209N.KeyData key_ = new J4209N.KeyData(0);
 	private Map auth_ = new Properties();
+	private int clickedRow = 0; 	// used for rendering the arrow
+	private ImageIcon arrowIcon = new ImageIcon(AuthFrame.class.getResource("/jence/icon/checkbox16.png"));
 
 	private String ascii2hex(String str) {
 		try {
@@ -303,14 +305,20 @@ public class AuthFrame extends JDialog {
 		if (table.getSelectedRow() < -1) {
 			return;
 		}
+
+		table.repaint();
 		if (block0_.isSelected()) {
 			selection = (Integer) block0_.getClientProperty("selection");
+			clickedRow = selection;
 		} else if (block1_.isSelected()) {
 			selection = (Integer) block1_.getClientProperty("selection");
+			clickedRow = selection;
 		} else if (block2_.isSelected()) {
 			selection = (Integer) block2_.getClientProperty("selection");
+			clickedRow = selection;
 		} else if (trailer_.isSelected()) {
 			selection = (Integer) trailer_.getClientProperty("selection");
+			clickedRow = selection;
 		}
 		table.setRowSelectionInterval(selection, selection);
 	}
@@ -379,6 +387,7 @@ public class AuthFrame extends JDialog {
 			model.addRow(new Object[] { "110", "R/W with Key B, Read with Key A", "Key B", "Key A | B" });
 			model.addRow(new Object[] { "111", "-", "-", "-" });
 		}
+		table.setModel(model);
 		table.setModel(model);
 
 		loadSelection();
@@ -665,26 +674,23 @@ public class AuthFrame extends JDialog {
 		};
 
 		table.setModel(model);
+		table.getColumnModel().getColumn(0).setPreferredWidth(50); // Adjust
+
+		table.setDefaultRenderer(Object.class, new TableCellRenderer());
 
 		table.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-//				if (e.getClickCount() == 2) { // Check for double-click
-//					
-//				}
-
-//				for (int i = 0; i < table_1.getItemCount(); i++) {
-//					table_1.getItem(i).setImage((Image) null);
-//				}
-//				TableItem item = (TableItem) arg0.item;
-//
-//				item.setImage(SWTResourceManager.getImage(
-//						NfcAppComposite.class, "/jence/icon/checkbox16.png"));
-//				arg0.doit = true;
 				saveSelection();
 				updateAccessBits();
 
+				int row = table.rowAtPoint(e.getPoint());
+				if (row >= 0) {
+					clickedRow = row;
+					table.repaint(); // Repaint the table to reflect changes
+				}
 			}
+
 		});
 
 		scrollPane.setViewportView(table);
@@ -696,6 +702,7 @@ public class AuthFrame extends JDialog {
 		gbc_panel_4.fill = GridBagConstraints.BOTH;
 		gbc_panel_4.gridx = 0;
 		gbc_panel_4.gridy = 2;
+
 		getContentPane().add(panel_4, gbc_panel_4);
 		GridBagLayout gbl_panel_4 = new GridBagLayout();
 		gbl_panel_4.columnWidths = new int[] { 235, 0, 0 };
@@ -958,6 +965,33 @@ public class AuthFrame extends JDialog {
 //		setAlwaysOnTop(true); 
 		this.pack();
 		this.setLocationRelativeTo(parent);
+
+	}
+
+	private class TableCellRenderer extends DefaultTableCellRenderer {
+		@Override
+		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
+				int row, int column) {
+			JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row,
+					column);
+			if (column == 0 && row == clickedRow) {
+				label.setIcon(arrowIcon);
+				label.setText(value.toString()); // Clear text if value is ImageIcon
+			} else {
+				label.setIcon(null); // No icon for other cells
+				label.setText(value != null ? value.toString() : ""); // Set regular text if value is not null
+			}
+
+			// Align the text in the first column to the center
+			if (column == 0) {
+				label.setHorizontalAlignment(JLabel.CENTER);
+
+			} else {
+				label.setHorizontalAlignment(JLabel.LEFT); // Align other columns to the left
+			}
+
+			return label;
+		}
 	}
 }
 

@@ -141,6 +141,7 @@ public class NfcAppFrame extends JFrame {
 
 	private J4209N.KeyData keydata_ = new J4209N.KeyData(0); // full access
 	private Timer timer_ = null;
+	public static boolean scanError = false;
 
 	public static <T extends JComponent> void setEnabled(boolean enabled, T... components) {
 		for (T component : components) {
@@ -356,7 +357,7 @@ public class NfcAppFrame extends JFrame {
 			data = new byte[NfcApp.driver_.blocksize()];
 			DefaultTableModel model = (DefaultTableModel) table_.getModel();
 			for (Tuple<Integer, Integer> cell : editedValue) {
-				System.out.println("Row: " + cell.getRow() + ", Col: " + cell.getCol());
+//				System.out.println("Row: " + cell.getRow() + ", Col: " + cell.getCol());
 				for (int i = 2; i < data.length; i++) {
 					String cellData = model.getValueAt(cell.getRow(), i).toString();
 					data[i - 2] = (byte) Integer.parseInt(cellData, 16);
@@ -617,7 +618,7 @@ public class NfcAppFrame extends JFrame {
 					data = NfcApp.driver_.ndefRead(i);
 				else
 					data = NfcApp.driver_.read(i, false);
-				System.out.println(i);
+//				System.out.println(i);
 
 				if (data != null) {
 					// System.out.println("Block:"+i+"\t"+NfcApp.driver_.toHex(data));
@@ -713,6 +714,7 @@ public class NfcAppFrame extends JFrame {
 
 				} catch (Exception e) {
 					NfcApp.prompt(NfcAppFrame.this, e.getMessage(), "Error", MessageType.ERROR);
+					NfcAppFrame.scanError = true;
 				} finally {
 					// Hide loading panel after completion
 					SwingUtilities.invokeLater(new Runnable() {
@@ -738,6 +740,29 @@ public class NfcAppFrame extends JFrame {
 
 						}
 					});
+
+					if (!NfcAppFrame.scanError) {
+						SwingUtilities.invokeLater(new Runnable() {
+
+							@Override
+							public void run() {
+								setComponentsEnabled(true, rawPanel_, ndefPanel_, emulatePanel_);
+								status("Scan completed.");
+							}
+						});
+
+					} else {
+						SwingUtilities.invokeLater(new Runnable() {
+
+							@Override
+							public void run() {
+								setComponentsEnabled(false, rawPanel_, ndefPanel_, emulatePanel_);
+								NfcAppFrame.scanError = false;
+							}
+						});
+
+					}
+
 				}
 			}
 		}).start();
@@ -818,8 +843,11 @@ public class NfcAppFrame extends JFrame {
 
 				if (connect()) {
 					setEnabled(true, btnDisconnect, btnScan);
-					setEnabled(false, btnRefresh, btnConnect);
-					setComponentsEnabled(true, rawPanel_, emulatePanel_, ndefPanel_);
+					setEnabled(false, btnRefresh, btnConnect, btnAuth_, btnRawWrite_);
+					if (!NfcAppFrame.scanError) {
+						setComponentsEnabled(true, rawPanel_, emulatePanel_, ndefPanel_);
+					}
+
 					status("Connection was successful.");
 				} else {
 					status("Could not connect to the port, Try again.");
@@ -859,10 +887,7 @@ public class NfcAppFrame extends JFrame {
 		btnScan = new JButton("Scan");
 		btnScan.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if (scan()) {
-//					 setEnabled(true,);
-					status("Scan completed.");
-				}
+				scan();
 
 			}
 		});

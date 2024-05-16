@@ -25,7 +25,7 @@
 	<key>Java</key>
 	<dict>
 		<key>MainClass</key>
-		<string>jence.swt.app.NfcApp</string>
+		<string>jence.swing.app.NfcApp</string>
 		<key>JVMVersion</key>
 		<string>1.6+</string>
 		<key>ClassPath</key>
@@ -34,8 +34,6 @@
 		</array>
 		<key>WorkingDirectory</key>
 		<string>$APP_PACKAGE/Contents/MacOS</string>
-		<key>StartOnMainThread</key>
-		<true/>
 	</dict>
 </dict>
 </plist>

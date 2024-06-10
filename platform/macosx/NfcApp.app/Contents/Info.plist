@@ -27,7 +27,7 @@
 		<key>MainClass</key>
 		<string>jence.swing.app.NfcApp</string>
 		<key>JVMVersion</key>
-		<string>1.6+</string>
+		<string>1.7+</string>
 		<key>ClassPath</key>
 		<array>
 			<string>$APP_PACKAGE/Contents/MacOS/j4209n.jar</string>

@@ -72,6 +72,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.ref.Cleaner.Cleanable;
 import java.math.BigInteger;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -85,6 +86,8 @@ import javax.swing.JLayeredPane;
 import java.awt.GridLayout;
 import javax.swing.JScrollBar;
 import javax.swing.JProgressBar;
+
+import java.util.concurrent.TimeUnit;
 
 public class NfcAppFrame extends JFrame {
 
@@ -183,16 +186,6 @@ public class NfcAppFrame extends JFrame {
 			NfcApp.prompt(NfcAppFrame.this, e.getMessage() + " Please check if the device is attached to an USB port.",
 					"Warning", MessageType.WARNING);
 
-		}
-		return false;
-	}
-
-	private boolean disconnect() {
-		try {
-			NfcApp.driver_.close();
-			return true;
-		} catch (Exception e) {
-			NfcApp.prompt(NfcAppFrame.this, e.getLocalizedMessage(), "Error", MessageType.ERROR);
 		}
 		return false;
 	}
@@ -691,6 +684,8 @@ public class NfcAppFrame extends JFrame {
 	}
 
 	private boolean scan() {
+		btnScan.setEnabled(false);
+		btnDisconnect.setEnabled(false);
 		// Show loading panel immediately
 		loadingPanel_.setVisible(true);
 		table_.setVisible(false);
@@ -711,6 +706,20 @@ public class NfcAppFrame extends JFrame {
 					textBlockSize_.setText("" + NfcApp.driver_.blocksize());
 
 					dump();
+					try {
+						switch (NfcApp.driver_.type()) {
+						case MIFARE_CLASSIC_1K:
+						case MIFARE_CLASSIC_4K:
+							break;
+						default:
+							btnAuth_.setEnabled(false);
+							btnRawWrite_.setEnabled(false);
+							break;
+						}
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 
 				} catch (Exception e) {
 					NfcApp.prompt(NfcAppFrame.this, e.getMessage(), "Error", MessageType.ERROR);
@@ -721,22 +730,7 @@ public class NfcAppFrame extends JFrame {
 						public void run() {
 							loadingPanel_.setVisible(false);
 							table_.setVisible(true);
-							setComponentsEnabled(true, rawPanel_, emulatePanel_, ndefPanel_);
-
-							try {
-								switch (NfcApp.driver_.type()) {
-								case MIFARE_CLASSIC_1K:
-								case MIFARE_CLASSIC_4K:
-									break;
-								default:
-									btnAuth_.setEnabled(false);
-									btnRawWrite_.setEnabled(false);
-									break;
-								}
-							} catch (Exception e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
+							setComponentsEnabled(true, rawPanel_, emulatePanel_, ndefPanel_, btnScan, btnDisconnect);
 
 						}
 					});
@@ -758,6 +752,12 @@ public class NfcAppFrame extends JFrame {
 							public void run() {
 								setComponentsEnabled(false, rawPanel_, ndefPanel_, emulatePanel_);
 								NfcAppFrame.scanError = false;
+								try {
+									reconnect(); //hot fix to overcome the drivers tag not found issue
+								} catch (InterruptedException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
 							}
 						});
 
@@ -770,6 +770,28 @@ public class NfcAppFrame extends JFrame {
 		return true; // Assuming true is returned on success
 	}
 
+	private boolean reconnect() throws InterruptedException {
+		try {
+			NfcApp.driver_.close();
+			Thread.sleep(20); //can be reduced but 200ms just to be safe
+			NfcApp.driver_.open(comboPorts_.getSelectedItem().toString());
+			return true;
+
+		} catch (Exception e) {
+			NfcApp.prompt(NfcAppFrame.this,
+					e.getMessage() + " Reader Disconnected! Check the connection of The Reader.", "Error",
+					MessageType.ERROR);
+
+				setEnabled(true, btnDisconnect);
+				setEnabled(false, btnScan, btnAuth_, btnRawWrite_);
+				setComponentsEnabled(false, rawPanel_, emulatePanel_, ndefPanel_);
+				status("Disconnected.");
+			
+
+		}
+		return false;
+	}
+
 	private boolean connect() {
 		try {
 			NfcApp.driver_.open(comboPorts_.getSelectedItem().toString());
@@ -777,12 +799,23 @@ public class NfcAppFrame extends JFrame {
 		} catch (Exception e) {
 			NfcApp.prompt(NfcAppFrame.this, e.getMessage() + " Could not connect to this port. Try another port.",
 					"Warning", MessageType.WARNING);
+
+		}
+		return false;
+	}
+
+	private boolean disconnect() {
+		try {
+			NfcApp.driver_.close();
+			return true;
+		} catch (Exception e) {
+			NfcApp.prompt(NfcAppFrame.this, e.getLocalizedMessage(), "Error", MessageType.ERROR);
 		}
 		return false;
 	}
 
 	public NfcAppFrame() {
-		
+
 		this.setIconImage(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/nfc32.png")).getImage());
 		GridBagLayout gridBagLayout = new GridBagLayout();
 		gridBagLayout.columnWidths = new int[] { 63, 0 };

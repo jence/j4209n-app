@@ -55,18 +55,30 @@ public class NDEFDialog extends JDialog {
 
 	private final ButtonGroup buttonGroup = new ButtonGroup();
 
-	private void callbackWrite(int option, int selection, String text) throws Exception {
+	private boolean callbackWrite(int option, int selection, String text) throws Exception {
+		int dataSize = text.length() + 4;
+
+		boolean confirm = NfcApp.prompt(this, dataSize
+				+ " Bytes Will be written in the Cards Memory. You need at least " + dataSize 
+				+ " of Space to write the NDEF record or else the operation will not occur proeprly. <br>Are you Sure You Wanna Write?",
+				"Confirmation", MessageType.CONFIRMATION);
+		if (!confirm) {
+			return false;
+		}
+
 		if (option == 1) {
+
 			if (NfcApp.driver_.isNDEF()) {
 				NfcApp.driver_.format();
 				try {
 					// formatting the second time should fail
 					NfcApp.driver_.format();
-					NfcAppFrame.status("FAILED to clean up the card. Please try again.");
-					return;
+//					NfcAppFrame.status("FAILED to clean up the card. Please try again.");
+					return false;
 				} catch (Exception e) {
 					NfcApp.driver_.sync();
 					NfcApp.driver_.ndefFormat();
+					NfcApp.prompt(this, "FAILED to clean up the card. Please try again.", "Error", MessageType.ERROR);
 				}
 			} else {
 				NfcApp.driver_.ndefFormat();
@@ -77,32 +89,33 @@ public class NDEFDialog extends JDialog {
 			}
 		}
 		switch (selection) {
-		case 0:
+		case 1:
 			NfcApp.driver_.ndefAddUri("https://" + text);
 			NfcAppFrame.status("https written successfully.");
 			break; // https
-		case 1:
+		case 2:
 			NfcApp.driver_.ndefAddUri("http://" + text);
 			NfcAppFrame.status("http written successfully.");
 			break; // http
-		case 2:
+		case 3:
 			NfcApp.driver_.ndefAddText(text);
 			NfcAppFrame.status("text written successfully.");
 			break; // text
-		case 3:
+		case 4:
 			NfcApp.driver_.ndefAddUri("tel://" + text);
 			NfcAppFrame.status("tel written successfully.");
 			break; // phone
-		case 4:
+		case 5:
 			NfcApp.driver_.ndefAddUri("mailto://" + text);
 			NfcAppFrame.status("email written successfully.");
 			break; // email
-		case 5:
+		case 6:
 			Vcard vcard = new Vcard(text);
 			NfcApp.driver_.ndefAddVcard(vcard);
 			NfcAppFrame.status("Vcard written successfully.");
 			break; // vcard
 		}
+		return true;
 	}
 
 	private void updateGui() {
@@ -678,6 +691,7 @@ public class NDEFDialog extends JDialog {
 	}
 
 	private void ndefWrite(final boolean eraseWrite) {
+		boolean status = false;
 		String text = text_.getText().trim();
 		if (btnVcard_.isSelected()) {
 			try {
@@ -722,13 +736,15 @@ public class NDEFDialog extends JDialog {
 					text = vcard.toVcard();
 				}
 				try {
-					callbackWrite((eraseWrite) ? 1 : 0, selection_, text);
+					status = callbackWrite((eraseWrite) ? 1 : 0, selection_, text);
 				} catch (Exception e) {
 					System.out.println(e.getLocalizedMessage());
 				}
 
 //				this.getShell().dispose();
-				this.dispose();
+				if (status) {
+					this.dispose();
+				}
 
 			} catch (Exception e) {
 				NfcApp.prompt(this, e.getLocalizedMessage(), "Error", MessageType.WARNING);

@@ -32,32 +32,33 @@ public class LimitedCharacterCellEditor extends DefaultCellEditor {
         });
     }
 
-    class LimitedDocument extends PlainDocument {
-        private static final long serialVersionUID = 1L;
-        private int maxCharacters;
-        private String allowedCharacters;
+}
 
-        public LimitedDocument(int maxCharacters, String allowedCharacters) {
-            this.maxCharacters = maxCharacters;
-            this.allowedCharacters = allowedCharacters;
+class LimitedDocument extends PlainDocument {
+    private static final long serialVersionUID = 1L;
+    private int maxCharacters;
+    private String allowedCharacters;
+
+    public LimitedDocument(int maxCharacters, String allowedCharacters) {
+        this.maxCharacters = maxCharacters;
+        this.allowedCharacters = allowedCharacters;
+    }
+
+    @Override
+    public void insertString(int offs, String str, AttributeSet a) throws BadLocationException {
+        if (str == null) {
+            return;
         }
 
-        @Override
-        public void insertString(int offs, String str, AttributeSet a) throws BadLocationException {
-            if (str == null) {
-                return;
-            }
-
-            // Check if the resulting text would be within the character limit
-            if (getLength() + str.length() <= maxCharacters) {
-                // Check if all characters in 'str' are allowed
-                for (char c : str.toCharArray()) {
-                    if (allowedCharacters.indexOf(c) == -1) {
-                        return; // Disallow insertion if any character is not allowed
-                    }
+        // Check if the resulting text would be within the character limit
+        if (getLength() + str.length() <= maxCharacters) {
+            // Check if all characters in 'str' are allowed
+            for (char c : str.toCharArray()) {
+                if (allowedCharacters.indexOf(c) == -1) {
+                    return; // Disallow insertion if any character is not allowed
                 }
-                super.insertString(offs, str.toUpperCase(), a);
             }
+            super.insertString(offs, str.toUpperCase(), a);
         }
     }
 }

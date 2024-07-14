@@ -21,6 +21,7 @@ import javax.management.modelmbean.ModelMBean;
 import javax.print.attribute.AttributeSet;
 import javax.swing.AbstractCellEditor;
 import javax.swing.BorderFactory;
+import javax.swing.DefaultCellEditor;
 import javax.swing.ImageIcon;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
@@ -55,6 +56,8 @@ import javax.swing.text.DocumentFilter;
 import javax.swing.text.DocumentFilter.FilterBypass;
 import javax.xml.crypto.Data;
 
+import org.eclipse.swt.graphics.Point;
+
 import jence.jni.J4209N;
 import jence.jni.Vcard;
 import jence.swing.app.NfcApp.MessageType;
@@ -63,8 +66,11 @@ import jence.swt.app.Callback;
 import javax.swing.JSpinner;
 import javax.swing.JCheckBox;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.AWTEvent;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -79,6 +85,7 @@ import java.util.LinkedList;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.regex.Pattern;
+import java.awt.event.AWTEventListener;
 import java.awt.event.ActionEvent;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SpinnerNumberModel;
@@ -102,6 +109,7 @@ public class NfcAppFrame extends JFrame {
 	private JButton btnDisconnect;
 	private JButton btnScan;
 	private JButton btnRawWrite_;
+	private JButton btnClear_ ;
 
 	private JTabbedPane tabFolder;
 	private JPanel rawPanel_;
@@ -349,6 +357,11 @@ public class NfcAppFrame extends JFrame {
 		try {
 			data = new byte[NfcApp.driver_.blocksize()];
 			DefaultTableModel model = (DefaultTableModel) table_.getModel();
+			if(editedValue.size() == 0) {
+				status("Nothing to Write...");
+	            table_.repaint();
+				return;
+			}
 			for (Tuple<Integer, Integer> cell : editedValue) {
 //				System.out.println("Row: " + cell.getRow() + ", Col: " + cell.getCol());
 				for (int i = 2; i < data.length; i++) {
@@ -526,20 +539,22 @@ public class NfcAppFrame extends JFrame {
 				}
 
 			};
-			model.addTableModelListener(new TableModelListener() {
-				@Override
-				public void tableChanged(TableModelEvent e) {
-					int row = e.getFirstRow();
-					int column = e.getColumn();
-					if (row >= 0 && column >= 0) {
-//						Object oldValue = model.getValueAt(row, column);
-//						Object newValue = model.getValueAt(row, column);
-//						System.out.println("Cell changed at row " + row + ", column " + column + ". Old value: "
-//								+ oldValue + ", New value: " + newValue);
-						editedValue.add(new Tuple<Integer, Integer>(row, column));
-					}
-				}
-			});
+			
+			////bold style old now custom cell editor
+//			model.addTableModelListener(new TableModelListener() {
+//				@Override
+//				public void tableChanged(TableModelEvent e) {
+//					int row = e.getFirstRow();
+//					int column = e.getColumn();
+//					if (row >= 0 && column >= 0) {
+////						Object oldValue = model.getValueAt(row, column);
+////						Object newValue = model.getValueAt(row, column);
+////						System.out.println("Cell changed at row " + row + ", column " + column + ". Old value: "
+////								+ oldValue + ", New value: " + newValue);
+//						editedValue.add(new Tuple<Integer, Integer>(row, column));
+//					}
+//				}
+//			});
 
 			for (String name : NDEFcolumnNames) {
 				model.addColumn(name);
@@ -642,8 +657,8 @@ public class NfcAppFrame extends JFrame {
 				table_.setEnabled(true);
 				for (int columnIndex = 0; columnIndex < table_.getColumnCount(); columnIndex++) {
 					// Set the LimitedCharacterCellEditor for each column
-					table_.getColumnModel().getColumn(columnIndex)
-							.setCellEditor(new LimitedCharacterCellEditor(2, "0123456789ABCDEFabcdef"));
+//					table_.getColumnModel().getColumn(columnIndex)
+//							.setCellEditor(new LimitedCharacterCellEditor(2, "0123456789ABCDEFabcdef"));
 				}
 
 				break;
@@ -742,6 +757,11 @@ public class NfcAppFrame extends JFrame {
 							public void run() {
 								setComponentsEnabled(true, rawPanel_, ndefPanel_, emulatePanel_);
 								status("Scan completed.");
+								for (int i = 0; i < table_.getColumnCount(); i++) {
+//									table_.getColumnModel().getColumn(i).setCellEditor(new SingleClickCellEditor(table_));
+									table_.getColumnModel().getColumn(i).setCellEditor(new SingleClickCellEditor(table_, 2,"abcedfABCDEF0123456789"));
+								}
+
 							}
 						});
 
@@ -753,7 +773,7 @@ public class NfcAppFrame extends JFrame {
 								setComponentsEnabled(false, rawPanel_, ndefPanel_, emulatePanel_);
 								NfcAppFrame.scanError = false;
 								try {
-									reconnect(); //hot fix to overcome the drivers tag not found issue
+									reconnect(); // hot fix to overcome the drivers tag not found issue
 								} catch (InterruptedException e) {
 									// TODO Auto-generated catch block
 									e.printStackTrace();
@@ -766,6 +786,8 @@ public class NfcAppFrame extends JFrame {
 				}
 			}
 		}).start();
+//		JTextField textField = new JTextField();
+//
 
 		return true; // Assuming true is returned on success
 	}
@@ -773,7 +795,7 @@ public class NfcAppFrame extends JFrame {
 	private boolean reconnect() throws InterruptedException {
 		try {
 			NfcApp.driver_.close();
-			Thread.sleep(20); //can be reduced but 200ms just to be safe
+			Thread.sleep(20); // can be reduced but 200ms just to be safe
 			NfcApp.driver_.open(comboPorts_.getSelectedItem().toString());
 			return true;
 
@@ -782,11 +804,10 @@ public class NfcAppFrame extends JFrame {
 					e.getMessage() + " Reader Disconnected! Check the connection of The Reader.", "Error",
 					MessageType.ERROR);
 
-				setEnabled(true, btnDisconnect);
-				setEnabled(false, btnScan, btnAuth_, btnRawWrite_);
-				setComponentsEnabled(false, rawPanel_, emulatePanel_, ndefPanel_);
-				status("Disconnected.");
-			
+			setEnabled(true, btnDisconnect);
+			setEnabled(false, btnScan, btnAuth_, btnRawWrite_);
+			setComponentsEnabled(false, rawPanel_, emulatePanel_, ndefPanel_);
+			status("Disconnected.");
 
 		}
 		return false;
@@ -1132,6 +1153,18 @@ public class NfcAppFrame extends JFrame {
 
 			}
 		});
+		
+		 btnClear_ = new JButton("Clear Edits");
+		 btnClear_.addActionListener(new ActionListener() {
+		 	public void actionPerformed(ActionEvent e) {
+		 		NfcAppFrame.editedValue.clear();
+		 		status("Cell Edits Cleared!");
+	            table_.repaint();
+		 	}
+		 });
+		btnClear_.setEnabled(false);
+		btnClear_.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/format.png")));
+		panel_3.add(btnClear_);
 		btnAuth_.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/key.png")));
 		panel_3.add(btnAuth_);
 
@@ -1148,6 +1181,65 @@ public class NfcAppFrame extends JFrame {
 		table_.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		table_.getTableHeader().setReorderingAllowed(false);
 		scrollPane.setViewportView(table_);
+		table_.putClientProperty("terminateEditOnFocusLost", Boolean.TRUE);
+
+		
+//        Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {
+//            @Override
+//            public void eventDispatched(AWTEvent event) {
+//                if (event instanceof MouseEvent) {
+//                    MouseEvent mouseEvent = (MouseEvent) event;
+//                    if (mouseEvent.getID() == MouseEvent.MOUSE_CLICKED) {
+//                        if (!table_.getBounds().contains(mouseEvent.getPoint())) {
+//                            TableCellEditor editor = table_.getCellEditor();
+//                            if (editor != null) {
+//                                editor.stopCellEditing(); // Close editor if editing
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }, AWTEvent.MOUSE_EVENT_MASK);
+
+//        table_.addFocusListener(new FocusAdapter() {
+//            @Override
+//            public void focusLost(FocusEvent e) {
+//                TableCellEditor editor = table_.getCellEditor();
+//                if (editor != null) {
+//                    editor.stopCellEditing(); // Close editor if editing
+//                }
+//            }
+//        });
+		
+//		table_.addMouseListener(new MouseAdapter() {
+//			@Override
+//			public void mouseClicked(MouseEvent e) {
+//				if (e.getClickCount() == 1) { // Single click
+//					int row = table_.rowAtPoint(e.getPoint());
+//					int column = table_.columnAtPoint(e.getPoint());
+//					table_.setValueAt("", row, column);
+//					table_.editCellAt(row, column);
+//					Component editor = table_.getEditorComponent();
+//
+//					if (editor != null) {
+//						editor.requestFocusInWindow();
+//					}
+//				}
+//			}
+//		});
+//
+//		table_.addFocusListener(new FocusAdapter() {
+//			@Override
+//			public void focusLost(FocusEvent e) {
+//				if (table_.isEditing()) {
+//					System.out.println("hi");
+////		            TableCellEditor editor = table_.getCellEditor();
+////		            if (editor != null) {
+////		                editor.stopCellEditing();
+////		            }
+//				}
+//			}
+//		});
 
 		ndefPanel_ = new JPanel();
 		tabFolder.addTab("NDEF", null, ndefPanel_, null);
@@ -1475,6 +1567,7 @@ class CustomRenderer extends DefaultTableCellRenderer {
 		for (Tuple<Integer, Integer> tuple : NfcAppFrame.editedValue) {
 			if (tuple.getRow() == row && tuple.getCol() == column) {
 				setFont(boldFont);
+				setFont(getFont().deriveFont(15f));
 				cell.setBackground(Color.decode("#b5daf7"));
 			}
 		}

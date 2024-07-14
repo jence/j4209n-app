@@ -8,11 +8,11 @@ import javax.swing.AbstractCellEditor;
 import javax.swing.DefaultCellEditor;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 import javax.swing.table.TableCellEditor;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.PlainDocument;
-
 
 public class SingleClickCellEditor extends AbstractCellEditor implements TableCellEditor {
 	private JTextField textField;
@@ -35,8 +35,17 @@ public class SingleClickCellEditor extends AbstractCellEditor implements TableCe
 	@Override
 	public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
 		originalValue = value; // Store original value
-		textField.setText(""); // Clear the cell content when editing starts
-		textField.selectAll(); // Select all text for quick replacement
+		textField.setText(value != null ? value.toString() : ""); // Set the cell content when editing starts
+
+		// Ensure the text is selected after the component gains focus
+		SwingUtilities.invokeLater(new Runnable() {
+			@Override
+			public void run() {
+				textField.requestFocusInWindow();
+				textField.selectAll(); // Select all text for quick replacement
+			}
+		});
+
 		this.row = row;
 		this.col = column;
 		return textField;
@@ -73,33 +82,31 @@ public class SingleClickCellEditor extends AbstractCellEditor implements TableCe
 	}
 }
 
+class LimitedDocument extends PlainDocument {
+	private static final long serialVersionUID = 1L;
+	private int maxCharacters;
+	private String allowedCharacters;
 
-//class LimitedDocument extends PlainDocument {
-//    private static final long serialVersionUID = 1L;
-//    private int maxCharacters;
-//    private String allowedCharacters;
-//
-//    public LimitedDocument(int maxCharacters, String allowedCharacters) {
-//        this.maxCharacters = maxCharacters;
-//        this.allowedCharacters = allowedCharacters;
-//    }
-//
-//    @Override
-//    public void insertString(int offs, String str, AttributeSet a) throws BadLocationException {
-//        if (str == null) {
-//            return;
-//        }
-//
-//        // Check if the resulting text would be within the character limit
-//        if (getLength() + str.length() <= maxCharacters) {
-//            // Check if all characters in 'str' are allowed
-//            for (char c : str.toCharArray()) {
-//                if (allowedCharacters.indexOf(c) == -1) {
-//                    return; // Disallow insertion if any character is not allowed
-//                }
-//            }
-//            super.insertString(offs, str.toUpperCase(), a);
-//        }
-//    }
-//}
+	public LimitedDocument(int maxCharacters, String allowedCharacters) {
+		this.maxCharacters = maxCharacters;
+		this.allowedCharacters = allowedCharacters;
+	}
 
+	@Override
+	public void insertString(int offs, String str, AttributeSet a) throws BadLocationException {
+		if (str == null) {
+			return;
+		}
+
+		// Check if the resulting text would be within the character limit
+		if (getLength() + str.length() <= maxCharacters) {
+			// Check if all characters in 'str' are allowed
+			for (char c : str.toCharArray()) {
+				if (allowedCharacters.indexOf(c) == -1) {
+					return; // Disallow insertion if any character is not allowed
+				}
+			}
+			super.insertString(offs, str.toUpperCase(), a);
+		}
+	}
+}

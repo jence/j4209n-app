@@ -109,7 +109,7 @@ public class NfcAppFrame extends JFrame {
 	private JButton btnDisconnect;
 	private JButton btnScan;
 	private JButton btnRawWrite_;
-	private JButton btnClear_ ;
+	private JButton btnClear_;
 
 	private JTabbedPane tabFolder;
 	private JPanel rawPanel_;
@@ -357,9 +357,9 @@ public class NfcAppFrame extends JFrame {
 		try {
 			data = new byte[NfcApp.driver_.blocksize()];
 			DefaultTableModel model = (DefaultTableModel) table_.getModel();
-			if(editedValue.size() == 0) {
+			if (editedValue.size() == 0) {
 				status("Nothing to Write...");
-	            table_.repaint();
+				table_.repaint();
 				return;
 			}
 			for (Tuple<Integer, Integer> cell : editedValue) {
@@ -539,8 +539,8 @@ public class NfcAppFrame extends JFrame {
 				}
 
 			};
-			
-			////bold style old now custom cell editor
+
+			//// bold style old now custom cell editor
 //			model.addTableModelListener(new TableModelListener() {
 //				@Override
 //				public void tableChanged(TableModelEvent e) {
@@ -657,8 +657,8 @@ public class NfcAppFrame extends JFrame {
 				table_.setEnabled(true);
 				for (int columnIndex = 0; columnIndex < table_.getColumnCount(); columnIndex++) {
 					// Set the LimitedCharacterCellEditor for each column
-//					table_.getColumnModel().getColumn(columnIndex)
-//							.setCellEditor(new LimitedCharacterCellEditor(2, "0123456789ABCDEFabcdef"));
+					table_.getColumnModel().getColumn(columnIndex)
+							.setCellEditor(new SingleClickCellEditor(table_, 2, "0123456789ABCDEFabcdef"));
 				}
 
 				break;
@@ -685,7 +685,7 @@ public class NfcAppFrame extends JFrame {
 				for (int columnIndex = 0; columnIndex < table_.getColumnCount(); columnIndex++) {
 					// Set the LimitedCharacterCellEditor for each column
 					table_.getColumnModel().getColumn(columnIndex)
-							.setCellEditor(new LimitedCharacterCellEditor(4, "0123456789ABCDEFabcdef"));
+							.setCellEditor(new SingleClickCellEditor(table_, 4, "0123456789ABCDEFabcdef"));
 				}
 
 				break;
@@ -757,10 +757,6 @@ public class NfcAppFrame extends JFrame {
 							public void run() {
 								setComponentsEnabled(true, rawPanel_, ndefPanel_, emulatePanel_);
 								status("Scan completed.");
-								for (int i = 0; i < table_.getColumnCount(); i++) {
-//									table_.getColumnModel().getColumn(i).setCellEditor(new SingleClickCellEditor(table_));
-									table_.getColumnModel().getColumn(i).setCellEditor(new SingleClickCellEditor(table_, 2,"abcedfABCDEF0123456789"));
-								}
 
 							}
 						});
@@ -1153,15 +1149,15 @@ public class NfcAppFrame extends JFrame {
 
 			}
 		});
-		
-		 btnClear_ = new JButton("Clear Edits");
-		 btnClear_.addActionListener(new ActionListener() {
-		 	public void actionPerformed(ActionEvent e) {
-		 		NfcAppFrame.editedValue.clear();
-		 		status("Cell Edits Cleared!");
-	            table_.repaint();
-		 	}
-		 });
+
+		btnClear_ = new JButton("Clear Edits");
+		btnClear_.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				NfcAppFrame.editedValue.clear();
+				status("Cell Edits Cleared!");
+				table_.repaint();
+			}
+		});
 		btnClear_.setEnabled(false);
 		btnClear_.setIcon(new ImageIcon(NfcAppFrame.class.getResource("/jence/icon/format.png")));
 		panel_3.add(btnClear_);
@@ -1183,7 +1179,6 @@ public class NfcAppFrame extends JFrame {
 		scrollPane.setViewportView(table_);
 		table_.putClientProperty("terminateEditOnFocusLost", Boolean.TRUE);
 
-		
 //        Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {
 //            @Override
 //            public void eventDispatched(AWTEvent event) {
@@ -1210,7 +1205,7 @@ public class NfcAppFrame extends JFrame {
 //                }
 //            }
 //        });
-		
+
 //		table_.addMouseListener(new MouseAdapter() {
 //			@Override
 //			public void mouseClicked(MouseEvent e) {

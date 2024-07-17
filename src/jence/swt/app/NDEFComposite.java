@@ -177,7 +177,8 @@ public class NDEFComposite extends Composite {
 		lblFirstName.setText("First Name");
 		
 		textFirstName_ = new Text(vcarddata_, SWT.BORDER);
-		textFirstName_.setToolTipText("First Name must be provided.");
+		textFirstName_.setTextLimit(16);
+		textFirstName_.setToolTipText("First Name must be provided (max 16 char).");
 		textFirstName_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		
 		Label lblLastName = new Label(vcarddata_, SWT.NONE);
@@ -185,7 +186,8 @@ public class NDEFComposite extends Composite {
 		lblLastName.setText("Last Name");
 		
 		textLastName_ = new Text(vcarddata_, SWT.BORDER);
-		textLastName_.setToolTipText("Last Name must be provided.");
+		textLastName_.setTextLimit(16);
+		textLastName_.setToolTipText("Last Name must be provided (max 16 char).");
 		textLastName_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		
 		Label lblOtherNames = new Label(vcarddata_, SWT.NONE);
@@ -193,7 +195,8 @@ public class NDEFComposite extends Composite {
 		lblOtherNames.setText("Other Names");
 		
 		textOtherNames_ = new Text(vcarddata_, SWT.BORDER);
-		textOtherNames_.setToolTipText("Optional");
+		textOtherNames_.setTextLimit(16);
+		textOtherNames_.setToolTipText("Optional (max 16 char)");
 		textOtherNames_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		
 		comboVersion_ = new Combo(vcarddata_, SWT.READ_ONLY);
@@ -206,7 +209,8 @@ public class NDEFComposite extends Composite {
 		lblTelHome.setText("Tel Home");
 		
 		textTelHome_ = new Text(vcarddata_, SWT.BORDER);
-		textTelHome_.setToolTipText("Optional - Home telephone");
+		textTelHome_.setTextLimit(16);
+		textTelHome_.setToolTipText("Optional - Home telephone (max 16 char)");
 		textTelHome_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		
 		Label lblTelWork = new Label(vcarddata_, SWT.NONE);
@@ -214,7 +218,8 @@ public class NDEFComposite extends Composite {
 		lblTelWork.setText("Tel Work");
 		
 		textTelWork_ = new Text(vcarddata_, SWT.BORDER);
-		textTelWork_.setToolTipText("Optional - Work Telephone");
+		textTelWork_.setTextLimit(16);
+		textTelWork_.setToolTipText("Optional - Work Telephone (max 16 char)");
 		textTelWork_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		
 		Label lblEmail = new Label(vcarddata_, SWT.NONE);
@@ -222,7 +227,8 @@ public class NDEFComposite extends Composite {
 		lblEmail.setText("Email");
 		
 		textEmail_ = new Text(vcarddata_, SWT.BORDER);
-		textEmail_.setToolTipText("Email must be provided.");
+		textEmail_.setTextLimit(20);
+		textEmail_.setToolTipText("Email must be provided (max 20 char)");
 		textEmail_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		
 		btnDefault = new Button(vcarddata_, SWT.NONE);
@@ -235,7 +241,7 @@ public class NDEFComposite extends Composite {
 				textTelHome_.setText("012345678");
 				textTelWork_.setText("123 456 7890");
 				textTitle_.setText("Consultant");
-				textCompany_.setText("Consulting Company");
+				textCompany_.setText("Consulting Co.");
 				textNumber_.setText("11");
 				textStreet_.setText("Narrow Road");
 				textLocality_.setText("Uttara");
@@ -254,6 +260,8 @@ public class NDEFComposite extends Composite {
 		lblTitle.setText("Title");
 		
 		textTitle_ = new Text(vcarddata_, SWT.BORDER);
+		textTitle_.setTextLimit(20);
+		textTitle_.setToolTipText("Job Title or other title (max 20 char)");
 		textTitle_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 3, 1));
 		
 		Label lblCompany = new Label(vcarddata_, SWT.NONE);
@@ -261,7 +269,8 @@ public class NDEFComposite extends Composite {
 		lblCompany.setText("Company");
 		
 		textCompany_ = new Text(vcarddata_, SWT.BORDER);
-		textCompany_.setToolTipText("Optional - Company Name");
+		textCompany_.setTextLimit(16);
+		textCompany_.setToolTipText("Optional - Company Name (max 16 char)");
 		textCompany_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		new Label(vcarddata_, SWT.NONE);
 		
@@ -270,7 +279,8 @@ public class NDEFComposite extends Composite {
 		lblNumber.setText("Number");
 		
 		textNumber_ = new Text(vcarddata_, SWT.BORDER);
-		textNumber_.setToolTipText("Optional (Number)");
+		textNumber_.setTextLimit(10);
+		textNumber_.setToolTipText("House Number (max 10 char)");
 		textNumber_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		
 		lblNewLabel = new Label(vcarddata_, SWT.NONE);
@@ -278,6 +288,8 @@ public class NDEFComposite extends Composite {
 		lblNewLabel.setText("Street");
 		
 		textStreet_ = new Text(vcarddata_, SWT.BORDER);
+		textStreet_.setTextLimit(24);
+		textStreet_.setToolTipText("Street Address (max 24 char)");
 		textStreet_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		
 		lblNewLabel_1 = new Label(vcarddata_, SWT.NONE);
@@ -285,6 +297,8 @@ public class NDEFComposite extends Composite {
 		lblNewLabel_1.setText("Locality");
 		
 		textLocality_ = new Text(vcarddata_, SWT.BORDER);
+		textLocality_.setTextLimit(16);
+		textLocality_.setToolTipText("City, Suburb, etc. (max 16 char)");
 		textLocality_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		new Label(vcarddata_, SWT.NONE);
 		
@@ -293,6 +307,8 @@ public class NDEFComposite extends Composite {
 		lblRegion.setText("Region");
 		
 		textRegion_ = new Text(vcarddata_, SWT.BORDER);
+		textRegion_.setTextLimit(16);
+		textRegion_.setToolTipText("City, County, District (max 16 char)");
 		textRegion_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		
 		lblZip = new Label(vcarddata_, SWT.NONE);
@@ -300,6 +316,8 @@ public class NDEFComposite extends Composite {
 		lblZip.setText("Zip");
 		
 		textZip_ = new Text(vcarddata_, SWT.BORDER);
+		textZip_.setTextLimit(10);
+		textZip_.setToolTipText("Alpha numeric zip (max 10 char)");
 		textZip_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		
 		lblCountry = new Label(vcarddata_, SWT.NONE);
@@ -307,6 +325,8 @@ public class NDEFComposite extends Composite {
 		lblCountry.setText("Country");
 		
 		textCountry_ = new Text(vcarddata_, SWT.BORDER);
+		textCountry_.setTextLimit(16);
+		textCountry_.setToolTipText("Country name (max 16 char)");
 		textCountry_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		new Label(vcarddata_, SWT.NONE);
 		
@@ -315,7 +335,8 @@ public class NDEFComposite extends Composite {
 		lblPoBox.setText("PO Box");
 		
 		textPOBox_ = new Text(vcarddata_, SWT.BORDER);
-		textPOBox_.setToolTipText("Optional - PO Box Number");
+		textPOBox_.setTextLimit(10);
+		textPOBox_.setToolTipText("Optional - PO Box Number (max 10 char)");
 		textPOBox_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		
 		lblWebsite = new Label(vcarddata_, SWT.NONE);
@@ -323,6 +344,8 @@ public class NDEFComposite extends Composite {
 		lblWebsite.setText("Website");
 		
 		textUrl_ = new Text(vcarddata_, SWT.BORDER);
+		textUrl_.setTextLimit(20);
+		textUrl_.setToolTipText("Website URL. (max 20 char)");
 		textUrl_.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 3, 1));
 
 		label_4 = new Label(this, SWT.BORDER | SWT.SEPARATOR | SWT.HORIZONTAL);

@@ -812,6 +812,13 @@ public class NfcAppFrame extends JFrame {
 	private boolean connect() {
 		try {
 			NfcApp.driver_.open(comboPorts_.getSelectedItem().toString());
+			try {
+				byte[] uid = NfcApp.driver_.scan(10);
+
+			} catch (Exception e) {
+				// TODO: handle exception
+				System.out.println("No Card nearby");
+			}
 			return true;
 		} catch (Exception e) {
 			NfcApp.prompt(NfcAppFrame.this, e.getMessage() + " Could not connect to this port. Try another port.",
@@ -1571,6 +1578,30 @@ class CustomRenderer extends DefaultTableCellRenderer {
 	}
 }
 
+class TransparentPanel extends JPanel {
+	public TransparentPanel() {
+		setOpaque(false); // Set panel's opacity to false
+	}
+
+	@Override
+	protected void paintComponent(Graphics g) {
+		// Paint a transparent background
+		g.setColor(new Color(0, 153, 255, 100)); // Transparent color
+		g.fillRect(0, 0, getWidth(), getHeight()); // Fill the panel with transparent color
+		super.paintComponent(g); // Call super method to paint other components
+	}
+
+	@Override
+	protected void paintChildren(Graphics g) {
+		// Paint the children components
+		Graphics2D g2d = (Graphics2D) g.create();
+		g2d.setComposite(AlphaComposite.SrcOver.derive(1f)); // Set full opacity
+		super.paintChildren(g2d); // Call super method to paint children components
+		g2d.dispose();
+	}
+
+}
+
 class EmulationWorker extends SwingWorker<Void, Void> {
 	private NfcAppFrame parent;
 
@@ -1608,28 +1639,4 @@ class Tuple<A, B> {
 	public B getCol() {
 		return col;
 	}
-}
-
-class TransparentPanel extends JPanel {
-	public TransparentPanel() {
-		setOpaque(false); // Set panel's opacity to false
-	}
-
-	@Override
-	protected void paintComponent(Graphics g) {
-		// Paint a transparent background
-		g.setColor(new Color(0, 153, 255, 100)); // Transparent color
-		g.fillRect(0, 0, getWidth(), getHeight()); // Fill the panel with transparent color
-		super.paintComponent(g); // Call super method to paint other components
-	}
-
-	@Override
-	protected void paintChildren(Graphics g) {
-		// Paint the children components
-		Graphics2D g2d = (Graphics2D) g.create();
-		g2d.setComposite(AlphaComposite.SrcOver.derive(1f)); // Set full opacity
-		super.paintChildren(g2d); // Call super method to paint children components
-		g2d.dispose();
-	}
-
 }
